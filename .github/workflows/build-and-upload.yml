@@ -168,7 +168,5 @@ jobs:
         with:
           environments: build
 
-      - name: Upload packages
-        env:
-          PREFIX_DEV_API_KEY: ${{ secrets.PREFIX_DEV_API_KEY }}
+      - name: Upload packages (trusted publishing)
         run: pixi run -e build upload-packages conda-packages
