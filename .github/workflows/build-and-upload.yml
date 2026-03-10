@@ -43,7 +43,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             FORCE_FLAG="--force"
           fi
-          pixi run -e build bump-versions HEAD~1 $FORCE_FLAG
+          pixi run -e build bump-versions -- HEAD~1 $FORCE_FLAG
 
           # Read generated versions
           if [ -f .versions.env ]; then

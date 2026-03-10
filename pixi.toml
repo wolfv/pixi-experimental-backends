@@ -22,8 +22,7 @@ rust = ">=1.90"
 generate-versions = { cmd = "python scripts/generate-versions.py", description = "Generate version env vars for CI" }
 
 [feature.build.tasks.bump-versions]
-args = ["base_ref"]
-cmd = "python scripts/bump-versions.py {{ base_ref }}"
+cmd = "python scripts/bump-versions.py"
 description = "Bump patch versions for backends changed since base_ref"
 
 [feature.build.tasks.upload-packages]
