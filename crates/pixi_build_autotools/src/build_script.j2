@@ -1,0 +1,41 @@
+{%- set is_cmd_exe = build_platform == "windows" -%}
+{%- macro env(key) -%}
+{%- if is_cmd_exe %}{{ "%" ~ key ~ "%" }}{% else %}{{ "$" ~ key }}{% endif -%}
+{% endmacro -%}
+
+{# Set up common variables #}
+{%- set prefix = "%LIBRARY_PREFIX%" if is_cmd_exe else "$PREFIX" -%}
+
+{# Set up default configure arguments #}
+{%- set configure_args = [
+    "--prefix=" ~ prefix,
+] + extra_configure_args
+-%}
+
+{# Autotools is primarily a Unix build system #}
+{% if not is_cmd_exe -%}
+
+{# Run autoreconf if requested #}
+{% if autoreconf -%}
+autoreconf -vfi
+{% endif -%}
+
+{# Check if configure script exists #}
+cd "{{ source_dir }}"
+
+if [ ! -f "configure" ]; then
+    echo "Error: No configure script found. Set autoreconf = true in the backend config if this project needs autoreconf."
+    exit 1
+fi
+
+./configure {{ configure_args | join(" \\\n    ") }}
+
+make -j${CPU_COUNT:-1} {{ extra_make_args | join(" ") }}
+
+make install {{ extra_make_args | join(" ") }}
+
+{% else -%}
+@echo Autotools builds are not natively supported on Windows.
+@echo Consider using MSYS2 or cross-compiling from Unix.
+@exit /b 1
+{% endif -%}

@@ -1,0 +1,109 @@
+name: "Build & Upload Backends"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "crates/**"
+      - "recipe/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/build-and-upload.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    timeout-minutes: 80
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      ACTIONS_CACHE_SERVICE_V2: on
+    strategy:
+      matrix:
+        include:
+          - target: linux-64
+            os: ubuntu-latest
+          - target: linux-aarch64
+            os: ubuntu-latest
+          - target: osx-64
+            os: macos-15-intel
+          - target: osx-arm64
+            os: macos-15
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          environments: build
+
+      - name: Configure sccache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_RESULTS_URL', process.env.ACTIONS_RESULTS_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Set package version environment variables
+        shell: bash
+        run: pixi run -e build generate-versions >> $GITHUB_ENV
+
+      - name: Build all backends for ${{ matrix.target }}
+        shell: bash
+        env:
+          RATTLER_BUILD_ENABLE_GITHUB_INTEGRATION: "true"
+          RATTLER_BUILD_COLOR: "always"
+        run: pixi run -e build build-backend-packages ${{ matrix.target }}
+
+      - name: Show sccache stats
+        shell: bash
+        run: pixi run -e build sccache --stop-server
+
+      - name: Remove build cache
+        shell: bash
+        run: rm -rf output/build_cache
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda-packages-${{ matrix.target }}
+          path: output/**/*.conda
+
+  upload:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download all conda packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: conda-packages-*
+          path: conda-packages
+          merge-multiple: true
+          run-id: ${{ github.run_id }}
+
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          environments: build
+
+      - name: Upload packages
+        env:
+          PREFIX_DEV_API_KEY: ${{ secrets.PREFIX_DEV_API_KEY }}
+        run: pixi run -e build upload-packages conda-packages

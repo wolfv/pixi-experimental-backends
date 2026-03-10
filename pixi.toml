@@ -1,0 +1,45 @@
+[project]
+name = "pixi-experimental-backends"
+version = "0.1.0"
+description = "Experimental Pixi build backends for Meson and Autotools"
+channels = ["https://prefix.dev/conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+
+[dependencies]
+rust = ">=1.90"
+pkg-config = "*"
+
+[feature.build.activation.env]
+RUSTC_WRAPPER = "sccache"
+
+[feature.build.dependencies]
+rattler-build = ">=0.58.0,<0.59"
+sccache = "*"
+python = ">=3.11"
+
+[feature.build.tasks]
+generate-versions = { cmd = "python scripts/generate-versions.py", description = "Generate version env vars for CI" }
+
+[feature.build.tasks.upload-packages]
+args = ["packages_dir"]
+cmd = "python scripts/upload-packages.py {{ packages_dir }}"
+description = "Upload conda packages to prefix.dev with attestation"
+
+[feature.build.tasks.build-backend-packages]
+args = ["target_platform"]
+cmd = """
+rm -rf output/bld/ && \
+  rattler-build build \
+  --experimental \
+  --no-build-id \
+  --test native \
+  --channel-priority disabled \
+  --channel https://prefix.dev/conda-forge \
+  --variant-config recipe/variants.yaml \
+  --recipe recipe/recipe.yaml \
+  --target-platform {{ target_platform }}
+"""
+description = "Build backend packages for a target platform"
+
+[environments]
+build = ["build"]

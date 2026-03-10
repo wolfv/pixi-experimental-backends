@@ -1,0 +1,42 @@
+{%- set is_cmd_exe = build_platform == "windows" -%}
+{%- macro env(key) -%}
+{%- if is_cmd_exe %}{{ "%" ~ key ~ "%" }}{% else %}{{ "$" ~ key }}{% endif -%}
+{% endmacro -%}
+
+{# Set up common variables #}
+{%- set prefix = "%LIBRARY_PREFIX%" if is_cmd_exe else "$PREFIX" -%}
+
+{# Set up default Meson arguments #}
+{%- set meson_args = [
+    "--prefix=" ~ prefix,
+    "--buildtype=release",
+    "--default-library=shared",
+] + extra_args
+-%}
+
+{# Output version information #}
+meson --version
+ninja --version
+
+{# Configure and build #}
+{% if is_cmd_exe -%}
+if not exist builddir (
+    meson setup builddir "{{ source_dir }}" {{ meson_args | join(" ^\n        ") }}
+    @if errorlevel 1 exit 1
+)
+
+meson compile -C builddir
+@if errorlevel 1 exit 1
+
+meson install -C builddir --no-rebuild
+@if errorlevel 1 exit 1
+
+{% else -%}
+if [ ! -d "builddir" ]; then
+    meson setup builddir "{{ source_dir }}" {{ meson_args | join(" \\\n        ") }}
+fi
+
+meson compile -C builddir
+
+meson install -C builddir --no-rebuild
+{% endif -%}
