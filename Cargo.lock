@@ -4222,6 +4222,7 @@ dependencies = [
 [[package]]
 name = "pixi_build_backend"
 version = "0.1.7"
+source = "git+https://github.com/prefix-dev/pixi?rev=9a5f03b944fa0dca305543e38c11bcbcacb4b469#9a5f03b944fa0dca305543e38c11bcbcacb4b469"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4279,6 +4280,7 @@ dependencies = [
 [[package]]
 name = "pixi_build_types"
 version = "0.1.0"
+source = "git+https://github.com/prefix-dev/pixi?rev=9a5f03b944fa0dca305543e38c11bcbcacb4b469#9a5f03b944fa0dca305543e38c11bcbcacb4b469"
 dependencies = [
  "ordermap",
  "pixi_stable_hash",
@@ -4293,6 +4295,7 @@ dependencies = [
 [[package]]
 name = "pixi_stable_hash"
 version = "0.1.0"
+source = "git+https://github.com/prefix-dev/pixi?rev=9a5f03b944fa0dca305543e38c11bcbcacb4b469#9a5f03b944fa0dca305543e38c11bcbcacb4b469"
 dependencies = [
  "ordermap",
  "rattler_conda_types",
@@ -5544,6 +5547,7 @@ dependencies = [
 [[package]]
 name = "recipe_stage0"
 version = "0.1.1"
+source = "git+https://github.com/prefix-dev/pixi?rev=9a5f03b944fa0dca305543e38c11bcbcacb4b469#9a5f03b944fa0dca305543e38c11bcbcacb4b469"
 dependencies = [
  "hashlink",
  "indexmap 2.13.0",
