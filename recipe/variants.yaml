@@ -24,7 +24,7 @@ c_compiler_version:
   - if: linux
     then: 14
   - if: osx
-    then: 19
+    then: 19.*
 cxx_compiler:
   - if: linux
     then: gxx
@@ -36,7 +36,7 @@ cxx_compiler_version:
   - if: linux
     then: 14
   - if: osx
-    then: 19
+    then: 19.*
 
 # Pin the compiler used
 rust_compiler_version:
