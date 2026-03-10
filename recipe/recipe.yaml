@@ -36,7 +36,11 @@ outputs:
       script:
         env:
           CARGO_PROFILE_RELEASE_STRIP: symbols
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
         content:
+          - if: win
+            then:
+              - git config --global core.longpaths true
           - if: unix
             then:
               - export CARGO_TARGET_DIR=${{ SRC_DIR }}/../../../target-cache-experimental-backends
