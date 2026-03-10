@@ -66,13 +66,19 @@ def write_cargo_version(cargo_toml: Path, old_version: str, new_version: str):
 def main():
     repo_root = Path(__file__).parent.parent
 
-    # Determine what changed
-    base_ref = sys.argv[1] if len(sys.argv) > 1 else "HEAD~1"
+    # --force bumps all backends regardless of changes
+    force = "--force" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--force"]
+    base_ref = args[0] if args else "HEAD~1"
+
+    if force:
+        print("Force-bumping all backends")
+
     changed_files = get_changed_files(base_ref)
 
     bumped = {}
     for backend_name, cargo_path in BACKENDS.items():
-        if not backend_changed(backend_name, changed_files):
+        if not force and not backend_changed(backend_name, changed_files):
             continue
 
         cargo_toml = repo_root / cargo_path
