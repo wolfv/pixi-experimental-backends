@@ -40,4 +40,4 @@ cxx_compiler_version:
 
 # Pin the compiler used
 rust_compiler_version:
-  - 1.90.0
+  - 1.93.1
