@@ -81,14 +81,33 @@ impl GenerateRecipe for AutotoolsGenerator {
         );
 
         // Add necessary build tools
-        let mut tools = vec!["make", "pkg-config"];
+        let mut tools: Vec<&str> = vec!["make", "pkg-config"];
         if config.autoreconf {
             tools.extend_from_slice(&["autoconf", "automake", "libtool"]);
         }
-        for tool in tools {
-            let tool_name = SourcePackageName::from(tool);
-            if !model_dependencies.build.contains_key(&tool_name) {
-                requirements.build.push(tool.parse().into_diagnostic()?);
+
+        // On Windows, use MSYS2 tools (m2-* packages) like conda-forge does
+        if host_platform.is_windows() {
+            let m2_tools: Vec<String> = tools.iter().map(|t| format!("m2-{t}")).collect();
+            for tool in &m2_tools {
+                let tool_name = SourcePackageName::from(tool.as_str());
+                if !model_dependencies.build.contains_key(&tool_name) {
+                    requirements.build.push(tool.parse().into_diagnostic()?);
+                }
+            }
+            // Also need m2-bash to drive the build
+            let m2_bash = SourcePackageName::from("m2-bash");
+            if !model_dependencies.build.contains_key(&m2_bash) {
+                requirements
+                    .build
+                    .push("m2-bash".parse().into_diagnostic()?);
+            }
+        } else {
+            for tool in &tools {
+                let tool_name = SourcePackageName::from(*tool);
+                if !model_dependencies.build.contains_key(&tool_name) {
+                    requirements.build.push(tool.parse().into_diagnostic()?);
+                }
             }
         }
 

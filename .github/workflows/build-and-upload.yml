@@ -36,12 +36,19 @@ jobs:
             os: macos-15-intel
           - target: osx-arm64
             os: macos-15
+          - target: win-64
+            os: windows-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Enable long paths (Windows)
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.longpaths true
+        shell: bash
 
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
