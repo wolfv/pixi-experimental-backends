@@ -86,6 +86,14 @@ def main():
         print("No backends changed, nothing to bump.")
         return
 
+    # Update Cargo.lock to match bumped versions
+    print("Updating Cargo.lock...")
+    subprocess.run(
+        ["cargo", "generate-lockfile"],
+        cwd=repo_root,
+        check=True,
+    )
+
     # Re-read all versions (bumped or not) so the recipe always has them
     env_lines = []
     for name, cargo_path in BACKENDS.items():
