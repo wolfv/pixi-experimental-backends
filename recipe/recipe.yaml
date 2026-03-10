@@ -42,6 +42,7 @@ outputs:
           - if: win
             then:
               - git config --global core.longpaths true
+              - set "CARGO_HOME=C:\crg"
           - if: unix
             then:
               - export CARGO_TARGET_DIR=${{ SRC_DIR }}/../../../target-cache-experimental-backends
