@@ -92,8 +92,6 @@ jobs:
             os: ubuntu-latest
           - target: linux-aarch64
             os: ubuntu-latest
-          - target: osx-64
-            os: macos-15-intel
           - target: osx-arm64
             os: macos-15
           - target: win-64
