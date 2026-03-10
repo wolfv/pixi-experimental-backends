@@ -1,31 +1,25 @@
 """Generate version environment variables from Cargo.toml for the rattler-build recipe."""
 
-import json
-import subprocess
+import re
+import tomllib
 from pathlib import Path
 
-BACKENDS = [
-    "pixi_build_meson",
-    "pixi_build_autotools",
-]
+BACKENDS = {
+    "pixi_build_meson": "crates/pixi_build_meson/Cargo.toml",
+    "pixi_build_autotools": "crates/pixi_build_autotools/Cargo.toml",
+}
 
 
 def main():
     repo_root = Path(__file__).parent.parent
 
-    result = subprocess.run(
-        ["cargo", "metadata", "--format-version=1", "--no-deps"],
-        capture_output=True,
-        text=True,
-        check=True,
-        cwd=repo_root,
-    )
-    cargo_metadata = json.loads(result.stdout)
-
-    for package in cargo_metadata.get("packages", []):
-        if package["name"] in BACKENDS:
-            env_name = package["name"].replace("-", "_").upper() + "_VERSION"
-            print(f"{env_name}={package['version']}")
+    for name, cargo_path in BACKENDS.items():
+        cargo_toml = repo_root / cargo_path
+        with open(cargo_toml, "rb") as f:
+            data = tomllib.load(f)
+        version = data["package"]["version"]
+        env_name = name.replace("-", "_").upper() + "_VERSION"
+        print(f"{env_name}={version}")
 
 
 if __name__ == "__main__":

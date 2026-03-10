@@ -1,9 +1,9 @@
 """Auto-bump patch versions for backends that changed since last release."""
 
-import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 # Map crate directory names to their Cargo.toml paths
@@ -51,11 +51,9 @@ def bump_patch(version: str) -> str:
 
 def read_cargo_version(cargo_toml: Path) -> str:
     """Read the version from a Cargo.toml file."""
-    content = cargo_toml.read_text()
-    match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
-    if not match:
-        raise ValueError(f"No version found in {cargo_toml}")
-    return match.group(1)
+    with open(cargo_toml, "rb") as f:
+        data = tomllib.load(f)
+    return data["package"]["version"]
 
 
 def write_cargo_version(cargo_toml: Path, old_version: str, new_version: str):
@@ -88,22 +86,13 @@ def main():
         print("No backends changed, nothing to bump.")
         return
 
-    # Update Cargo.lock
-    subprocess.run(["cargo", "check", "--workspace"], cwd=repo_root, check=True,
-                    capture_output=True)
-
-    # Output env vars for the recipe (version without timestamp suffix)
-    env_lines = []
     # Re-read all versions (bumped or not) so the recipe always has them
-    result = subprocess.run(
-        ["cargo", "metadata", "--format-version=1", "--no-deps"],
-        capture_output=True, text=True, check=True, cwd=repo_root,
-    )
-    cargo_metadata = json.loads(result.stdout)
-    for package in cargo_metadata.get("packages", []):
-        if package["name"] in BACKENDS:
-            env_name = package["name"].replace("-", "_").upper() + "_VERSION"
-            env_lines.append(f"{env_name}={package['version']}")
+    env_lines = []
+    for name, cargo_path in BACKENDS.items():
+        cargo_toml = repo_root / cargo_path
+        version = read_cargo_version(cargo_toml)
+        env_name = name.replace("-", "_").upper() + "_VERSION"
+        env_lines.append(f"{env_name}={version}")
 
     # Write env file for CI consumption
     env_file = repo_root / ".versions.env"

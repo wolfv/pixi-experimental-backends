@@ -16,6 +16,7 @@ RUSTC_WRAPPER = "sccache"
 rattler-build = ">=0.58.0,<0.59"
 sccache = "*"
 python = ">=3.11"
+rust = ">=1.90"
 
 [feature.build.tasks]
 generate-versions = { cmd = "python scripts/generate-versions.py", description = "Generate version env vars for CI" }
