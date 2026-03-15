@@ -126,15 +126,11 @@ impl GenerateRecipe for GoGenerator {
         _workdir: impl AsRef<Path>,
         _editable: bool,
     ) -> miette::Result<BTreeSet<String>> {
-        Ok([
-            "**/*.go",
-            "go.mod",
-            "go.sum",
-        ]
-        .iter()
-        .map(|s| s.to_string())
-        .chain(config.extra_input_globs.clone())
-        .collect())
+        Ok(["**/*.go", "go.mod", "go.sum"]
+            .iter()
+            .map(|s| s.to_string())
+            .chain(config.extra_input_globs.clone())
+            .collect())
     }
 
     fn default_variants(

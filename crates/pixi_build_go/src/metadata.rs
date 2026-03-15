@@ -137,10 +137,7 @@ mod tests {
     fn test_module_short_name() {
         assert_eq!(module_short_name("github.com/user/project"), "project");
         assert_eq!(module_short_name("simple"), "simple");
-        assert_eq!(
-            module_short_name("example.com/deep/nested/pkg"),
-            "pkg"
-        );
+        assert_eq!(module_short_name("example.com/deep/nested/pkg"), "pkg");
     }
 
     #[test]

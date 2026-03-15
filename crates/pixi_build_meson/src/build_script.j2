@@ -20,7 +20,7 @@ ninja --version
 
 {# Configure and build #}
 {% if is_cmd_exe -%}
-if not exist builddir (
+if not exist builddir\build.ninja (
     meson setup builddir "{{ source_dir }}" {{ meson_args | join(" ^\n        ") }}
     @if errorlevel 1 exit 1
 )
@@ -32,7 +32,7 @@ meson install -C builddir --no-rebuild
 @if errorlevel 1 exit 1
 
 {% else -%}
-if [ ! -d "builddir" ]; then
+if [ ! -f "builddir/build.ninja" ]; then
     meson setup builddir "{{ source_dir }}" {{ meson_args | join(" \\\n        ") }}
 fi
 

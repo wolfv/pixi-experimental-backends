@@ -1,0 +1,24 @@
+[workspace]
+channels = [
+  "https://prefix.dev/pixi-experimental-backends",
+  "https://prefix.dev/conda-forge",
+]
+platforms = ["linux-64", "linux-aarch64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
+
+[package]
+name = "fzf"
+version = "0.62.0"
+description = "A command-line fuzzy finder"
+license = "MIT"
+
+[package.build.source]
+git = "https://github.com/junegunn/fzf.git"
+tag = "v0.62.0"
+
+[package.build.backend]
+name = "pixi-build-go"
+version = ">=0.1.0"
+
+[package.build.config]
+linker-flags = ["-s", "-w"]

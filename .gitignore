@@ -1,3 +1,5 @@
 /target
 .versions.env
-.pixi/
+**/.pixi/
+**/*.conda
+**/pixi.lock

@@ -15,14 +15,11 @@
 {% if is_cmd_exe -%}
 {# Windows: run autotools through MSYS2 shell (m2-bash) like conda-forge #}
 
-{# Run autoreconf if requested #}
-{% if autoreconf -%}
 set MSYSTEM=MINGW%ARCH%
-m2-bash -lc "autoreconf -vfi"
+{% if autoreconf -%}
+m2-bash -lc "cd \"$SRC_DIR\" && autoreconf -vfi"
 @if errorlevel 1 exit 1
 {% endif -%}
-
-set MSYSTEM=MINGW%ARCH%
 m2-bash -lc "cd \"$SRC_DIR\" && ./configure {{ configure_args | join(' ') }}"
 @if errorlevel 1 exit 1
 
@@ -34,12 +31,12 @@ m2-bash -lc "cd \"$SRC_DIR\" && make install {{ extra_make_args | join(' ') }}"
 
 {% else -%}
 
+cd "{{ source_dir }}"
+
 {# Run autoreconf if requested #}
 {% if autoreconf -%}
 autoreconf -vfi
 {% endif -%}
-
-cd "{{ source_dir }}"
 
 if [ ! -f "configure" ]; then
     echo "Error: No configure script found. Set autoreconf = true in the backend config if this project needs autoreconf."

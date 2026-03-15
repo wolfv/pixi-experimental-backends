@@ -1,0 +1,26 @@
+[workspace]
+channels = [
+  "https://prefix.dev/pixi-experimental-backends",
+  "https://prefix.dev/conda-forge",
+]
+platforms = ["linux-64", "linux-aarch64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
+
+[package]
+name = "libopus"
+version = "1.5.2"
+description = "Opus audio codec library"
+license = "BSD-3-Clause"
+
+[package.build.source]
+# Use the release tarball — the git checkout is missing pre-generated DNN headers
+url = "https://downloads.xiph.org/releases/opus/opus-1.5.2.tar.gz"
+
+[package.build.backend]
+name = "pixi-build-meson"
+version = ">=0.1.0"
+
+[package.build.config]
+# Opus is a pure C library; no C++ compiler needed
+compilers = ["c"]
+extra-args = ["-Dtests=disabled", "-Ddocs=disabled"]
