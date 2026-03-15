@@ -1,0 +1,10 @@
+---
+source: crates/pixi_build_go/src/build_script.rs
+expression: script
+---
+cd /d "my-prefix-dir"
+SET GOPATH=%SRC_DIR%/gopath
+SET GOBIN=%PREFIX%/bin
+
+go install -ldflags "-s -w"  ./...
+if errorlevel 1 exit 1

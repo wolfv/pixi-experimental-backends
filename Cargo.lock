@@ -4339,7 +4339,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_go"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "indexmap 2.13.0",
