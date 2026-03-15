@@ -1,0 +1,15 @@
+{%- if is_bash %}
+cd "{{ source_dir }}"
+
+make -j${CPU_COUNT:-1} {{ extra_make_args | join(" ") }}
+
+make install PREFIX="$PREFIX" {{ extra_install_args | join(" ") }}
+{%- else %}
+cd /d "{{ source_dir }}"
+
+nmake {{ extra_make_args | join(" ") }}
+@if errorlevel 1 exit 1
+
+nmake install PREFIX="%PREFIX%" {{ extra_install_args | join(" ") }}
+@if errorlevel 1 exit 1
+{%- endif %}

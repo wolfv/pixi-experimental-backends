@@ -26,6 +26,8 @@ jobs:
       meson_version: ${{ steps.bump.outputs.meson_version }}
       autotools_version: ${{ steps.bump.outputs.autotools_version }}
       go_version: ${{ steps.bump.outputs.go_version }}
+      gradle_version: ${{ steps.bump.outputs.gradle_version }}
+      make_version: ${{ steps.bump.outputs.make_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,6 +79,12 @@ jobs:
           fi
           if [ -n "${PIXI_BUILD_GO_VERSION:-}" ]; then
             git tag "pixi-build-go-v${PIXI_BUILD_GO_VERSION}" || true
+          fi
+          if [ -n "${PIXI_BUILD_GRADLE_VERSION:-}" ]; then
+            git tag "pixi-build-gradle-v${PIXI_BUILD_GRADLE_VERSION}" || true
+          fi
+          if [ -n "${PIXI_BUILD_MAKE_VERSION:-}" ]; then
+            git tag "pixi-build-make-v${PIXI_BUILD_MAKE_VERSION}" || true
           fi
           git push --tags || true
 

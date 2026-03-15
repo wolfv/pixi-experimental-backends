@@ -4359,6 +4359,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "pixi_build_gradle"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "indexmap 2.13.0",
+ "miette",
+ "minijinja",
+ "pixi_build_backend",
+ "pixi_build_types",
+ "rattler_build_jinja",
+ "rattler_build_types",
+ "rattler_conda_types",
+ "recipe_stage0",
+ "serde",
+ "tokio",
+]
+
+[[package]]
+name = "pixi_build_make"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "indexmap 2.13.0",
+ "miette",
+ "minijinja",
+ "pixi_build_backend",
+ "pixi_build_types",
+ "rattler_build_jinja",
+ "rattler_build_types",
+ "rattler_conda_types",
+ "recipe_stage0",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "pixi_build_meson"
 version = "0.1.1"
 dependencies = [

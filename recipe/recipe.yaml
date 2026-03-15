@@ -7,6 +7,8 @@ context:
   meson_version: ${{ env.get('PIXI_BUILD_MESON_VERSION', default='0.1.0dev') }}
   autotools_version: ${{ env.get('PIXI_BUILD_AUTOTOOLS_VERSION', default='0.1.0dev') }}
   go_version: ${{ env.get('PIXI_BUILD_GO_VERSION', default='0.1.0dev') }}
+  gradle_version: ${{ env.get('PIXI_BUILD_GRADLE_VERSION', default='0.1.0dev') }}
+  make_version: ${{ env.get('PIXI_BUILD_MAKE_VERSION', default='0.1.0dev') }}
 
 recipe:
   name: pixi-experimental-backends
@@ -51,7 +53,7 @@ outputs:
             then:
               - set "CARGO_TARGET_DIR=${{ SRC_DIR }}\..\..\..\\target-cache-experimental-backends"
           # Build all Rust backends at once
-          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go
+          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go -p pixi_build_gradle -p pixi_build_make
           # Install binaries to prefix
           - if: unix
             then:
@@ -59,12 +61,16 @@ outputs:
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-meson $PREFIX/bin/pixi-build-meson
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-autotools $PREFIX/bin/pixi-build-autotools
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-go $PREFIX/bin/pixi-build-go
+              - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-gradle $PREFIX/bin/pixi-build-gradle
+              - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-make $PREFIX/bin/pixi-build-make
           - if: win
             then:
               - if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
               - copy %CARGO_TARGET_DIR%\release\pixi-build-meson.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-autotools.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-go.exe %PREFIX%\bin\
+              - copy %CARGO_TARGET_DIR%\release\pixi-build-gradle.exe %PREFIX%\bin\
+              - copy %CARGO_TARGET_DIR%\release\pixi-build-make.exe %PREFIX%\bin\
           - if: unix
             then: cargo-bundle-licenses --format yaml --output $PREFIX/THIRDPARTY.yml
           - if: win
@@ -170,6 +176,76 @@ outputs:
       summary: A pixi build backend to build Go based packages.
       description: |
         This package provides a build backend for pixi that allows building packages using Go.
+      license: BSD-3-Clause
+      license_file:
+        - LICENSE
+        - THIRDPARTY.yml
+
+  # === pixi-build-gradle ===
+  - package:
+      name: pixi-build-gradle
+      version: ${{ gradle_version }}
+    inherit: rust-backends-build
+    build:
+      files:
+        - bin/pixi-build-gradle
+        - bin/pixi-build-gradle.exe
+        - LICENSE
+        - THIRDPARTY.yml
+      script:
+        - if: unix
+          then:
+            - mv ${{ PREFIX }}/THIRDPARTY.yml ${{ SRC_DIR }}/THIRDPARTY.yml
+          else:
+            - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
+    requirements:
+      run:
+        - pixi-build-api-version >=4,<5
+    tests:
+      - script: pixi-build-gradle --help
+      - package_contents:
+          bin:
+            - pixi-build-gradle
+    about:
+      homepage: https://github.com/wolfv/pixi-experimental-backends
+      summary: A pixi build backend to build Gradle based packages.
+      description: |
+        This package provides a build backend for pixi that allows building packages using Gradle.
+      license: BSD-3-Clause
+      license_file:
+        - LICENSE
+        - THIRDPARTY.yml
+
+  # === pixi-build-make ===
+  - package:
+      name: pixi-build-make
+      version: ${{ make_version }}
+    inherit: rust-backends-build
+    build:
+      files:
+        - bin/pixi-build-make
+        - bin/pixi-build-make.exe
+        - LICENSE
+        - THIRDPARTY.yml
+      script:
+        - if: unix
+          then:
+            - mv ${{ PREFIX }}/THIRDPARTY.yml ${{ SRC_DIR }}/THIRDPARTY.yml
+          else:
+            - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
+    requirements:
+      run:
+        - pixi-build-api-version >=4,<5
+    tests:
+      - script: pixi-build-make --help
+      - package_contents:
+          bin:
+            - pixi-build-make
+    about:
+      homepage: https://github.com/wolfv/pixi-experimental-backends
+      summary: A pixi build backend to build Make based packages.
+      description: |
+        This package provides a build backend for pixi that allows building packages using GNU Make.
       license: BSD-3-Clause
       license_file:
         - LICENSE
