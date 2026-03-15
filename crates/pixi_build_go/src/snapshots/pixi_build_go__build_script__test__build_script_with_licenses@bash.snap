@@ -1,0 +1,12 @@
+---
+source: crates/pixi_build_go/src/build_script.rs
+expression: script
+---
+export GOPATH=$SRC_DIR/gopath
+export GOBIN=$PREFIX/bin
+
+go install  ./...
+
+go-licenses save ./... --save_path $SRC_DIR/third_party_licenses
+mkdir -p $PREFIX/share/licenses/$PKG_NAME
+cp -r $SRC_DIR/third_party_licenses/* $PREFIX/share/licenses/$PKG_NAME/

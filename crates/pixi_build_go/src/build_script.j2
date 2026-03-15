@@ -1,0 +1,29 @@
+{% macro env(key) -%}
+{%- if is_bash %}{{ "$" ~key }}{% else %}{{ "%" ~ key ~ "%" }}{% endif -%}
+{% endmacro -%}
+{%- macro export(key, value) -%}
+{%- if is_bash -%}
+export {{ key }}={{ value }}
+{%- else -%}
+SET {{ key }}={{ value }}
+{%- endif -%}
+{%- endmacro -%}
+
+{{ export("GOPATH", env("SRC_DIR") ~ "/gopath") }}
+{{ export("GOBIN", env("PREFIX") ~ "/bin") }}
+
+go install {{ extra_args | join(" ") }} ./...
+{%- if not is_bash %}
+if errorlevel 1 exit 1
+{%- endif %}
+{% if collect_licenses %}
+go-licenses save ./... --save_path {{ env("SRC_DIR") }}/third_party_licenses
+{%- if is_bash %}
+mkdir -p {{ env("PREFIX") }}/share/licenses/{{ env("PKG_NAME") }}
+cp -r {{ env("SRC_DIR") }}/third_party_licenses/* {{ env("PREFIX") }}/share/licenses/{{ env("PKG_NAME") }}/
+{%- else %}
+mkdir {{ env("PREFIX") }}\share\licenses\{{ env("PKG_NAME") }}
+xcopy /E /I {{ env("SRC_DIR") }}\third_party_licenses {{ env("PREFIX") }}\share\licenses\{{ env("PKG_NAME") }}\
+if errorlevel 1 exit 1
+{%- endif %}
+{%- endif %}

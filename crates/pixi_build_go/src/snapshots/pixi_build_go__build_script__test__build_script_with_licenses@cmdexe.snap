@@ -1,0 +1,14 @@
+---
+source: crates/pixi_build_go/src/build_script.rs
+expression: script
+---
+SET GOPATH=%SRC_DIR%/gopath
+SET GOBIN=%PREFIX%/bin
+
+go install  ./...
+if errorlevel 1 exit 1
+
+go-licenses save ./... --save_path %SRC_DIR%/third_party_licenses
+mkdir %PREFIX%\share\licenses\%PKG_NAME%
+xcopy /E /I %SRC_DIR%\third_party_licenses %PREFIX%\share\licenses\%PKG_NAME%\
+if errorlevel 1 exit 1

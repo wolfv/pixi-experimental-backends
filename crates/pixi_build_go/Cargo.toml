@@ -1,0 +1,34 @@
+[package]
+description = "Go build backend for Pixi"
+edition.workspace = true
+license.workspace = true
+name = "pixi_build_go"
+version = "0.1.0"
+
+[[bin]]
+name = "pixi-build-go"
+path = "src/main.rs"
+
+[features]
+default = ["rustls-tls"]
+native-tls = ["pixi_build_backend/native-tls"]
+rustls-tls = ["pixi_build_backend/rustls-tls"]
+
+[dependencies]
+async-trait = { workspace = true }
+indexmap = { workspace = true }
+miette = { workspace = true }
+minijinja = { workspace = true, features = ["json"] }
+pixi_build_backend = { workspace = true }
+pixi_build_types = { workspace = true }
+rattler_conda_types = { workspace = true }
+recipe_stage0 = { workspace = true }
+serde = { workspace = true }
+thiserror = "2"
+tokio = { workspace = true }
+
+[dev-dependencies]
+insta = { version = "1", features = ["yaml", "redactions", "filters"] }
+rstest = "0.24"
+serde_json = { workspace = true }
+tempfile = "3"

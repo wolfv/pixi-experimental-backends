@@ -25,6 +25,7 @@ jobs:
       sha: ${{ steps.bump.outputs.sha }}
       meson_version: ${{ steps.bump.outputs.meson_version }}
       autotools_version: ${{ steps.bump.outputs.autotools_version }}
+      go_version: ${{ steps.bump.outputs.go_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,6 +74,9 @@ jobs:
           fi
           if [ -n "${PIXI_BUILD_AUTOTOOLS_VERSION:-}" ]; then
             git tag "pixi-build-autotools-v${PIXI_BUILD_AUTOTOOLS_VERSION}" || true
+          fi
+          if [ -n "${PIXI_BUILD_GO_VERSION:-}" ]; then
+            git tag "pixi-build-go-v${PIXI_BUILD_GO_VERSION}" || true
           fi
           git push --tags || true
 

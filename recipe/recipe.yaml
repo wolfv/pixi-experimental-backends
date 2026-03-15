@@ -6,6 +6,7 @@ context:
   api_version: "4"
   meson_version: ${{ env.get('PIXI_BUILD_MESON_VERSION', default='0.1.0dev') }}
   autotools_version: ${{ env.get('PIXI_BUILD_AUTOTOOLS_VERSION', default='0.1.0dev') }}
+  go_version: ${{ env.get('PIXI_BUILD_GO_VERSION', default='0.1.0dev') }}
 
 recipe:
   name: pixi-experimental-backends
@@ -50,18 +51,20 @@ outputs:
             then:
               - set "CARGO_TARGET_DIR=${{ SRC_DIR }}\..\..\..\\target-cache-experimental-backends"
           # Build all Rust backends at once
-          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools
+          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go
           # Install binaries to prefix
           - if: unix
             then:
               - TARGET=${CARGO_BUILD_TARGET:-$(rustc -vV | grep "host:" | awk '{print $2}')}
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-meson $PREFIX/bin/pixi-build-meson
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-autotools $PREFIX/bin/pixi-build-autotools
+              - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-go $PREFIX/bin/pixi-build-go
           - if: win
             then:
               - if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
               - copy %CARGO_TARGET_DIR%\release\pixi-build-meson.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-autotools.exe %PREFIX%\bin\
+              - copy %CARGO_TARGET_DIR%\release\pixi-build-go.exe %PREFIX%\bin\
           - if: unix
             then: cargo-bundle-licenses --format yaml --output $PREFIX/THIRDPARTY.yml
           - if: win
@@ -132,6 +135,41 @@ outputs:
       summary: A pixi build backend to build Autotools based packages.
       description: |
         This package provides a build backend for pixi that allows building packages using GNU Autotools (autoconf, automake, libtool).
+      license: BSD-3-Clause
+      license_file:
+        - LICENSE
+        - THIRDPARTY.yml
+
+  # === pixi-build-go ===
+  - package:
+      name: pixi-build-go
+      version: ${{ go_version }}
+    inherit: rust-backends-build
+    build:
+      files:
+        - bin/pixi-build-go
+        - bin/pixi-build-go.exe
+        - LICENSE
+        - THIRDPARTY.yml
+      script:
+        - if: unix
+          then:
+            - mv ${{ PREFIX }}/THIRDPARTY.yml ${{ SRC_DIR }}/THIRDPARTY.yml
+          else:
+            - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
+    requirements:
+      run:
+        - pixi-build-api-version >=4,<5
+    tests:
+      - script: pixi-build-go --help
+      - package_contents:
+          bin:
+            - pixi-build-go
+    about:
+      homepage: https://github.com/wolfv/pixi-experimental-backends
+      summary: A pixi build backend to build Go based packages.
+      description: |
+        This package provides a build backend for pixi that allows building packages using Go.
       license: BSD-3-Clause
       license_file:
         - LICENSE
