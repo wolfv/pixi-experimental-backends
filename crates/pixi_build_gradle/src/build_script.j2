@@ -11,14 +11,16 @@ gradle --no-daemon {{ tasks | join(" ") }} {{ extra_args | join(" ") }}
 {%- endif %}
 
 # Auto-install Application plugin distribution to PREFIX if present
-for dist_dir in build/install/*/; do
-    if [ -d "$dist_dir" ]; then
+# Search root and submodule build/install/ directories
+find . -maxdepth 5 -type d -name "install" | while read -r install_dir; do
+    for dist_dir in "$install_dir"/*/; do
+        [ -d "$dist_dir" ] || continue
         [ -d "${dist_dir}bin" ] && cp -r "${dist_dir}bin/." "$PREFIX/bin/"
         if [ -d "${dist_dir}lib" ]; then
             mkdir -p "$PREFIX/share/java"
             cp "${dist_dir}lib/"*.jar "$PREFIX/share/java/"
         fi
-    fi
+    done
 done
 {%- else %}
 cd /d "{{ source_dir }}"
@@ -32,15 +34,17 @@ gradle --no-daemon {{ tasks | join(" ") }} {{ extra_args | join(" ") }}
 {%- endif %}
 @if errorlevel 1 exit 1
 
-for /d %%d in (build\install\*) do (
-    if exist "%%d\bin" (
-        xcopy /E /I /Y "%%d\bin" "%PREFIX%\bin\"
-        @if errorlevel 1 exit 1
-    )
-    if exist "%%d\lib" (
-        if not exist "%PREFIX%\share\java" mkdir "%PREFIX%\share\java"
-        xcopy /I /Y "%%d\lib\*.jar" "%PREFIX%\share\java\"
-        @if errorlevel 1 exit 1
+for /r /d %%i in (install) do (
+    for /d %%d in ("%%i\*") do (
+        if exist "%%d\bin" (
+            xcopy /E /I /Y "%%d\bin" "%PREFIX%\bin\"
+            @if errorlevel 1 exit 1
+        )
+        if exist "%%d\lib" (
+            if not exist "%PREFIX%\share\java" mkdir "%PREFIX%\share\java"
+            xcopy /I /Y "%%d\lib\*.jar" "%PREFIX%\share\java\"
+            @if errorlevel 1 exit 1
+        )
     )
 )
 {%- endif %}

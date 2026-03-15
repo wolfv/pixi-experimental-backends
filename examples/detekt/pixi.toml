@@ -1,0 +1,31 @@
+[workspace]
+channels = [
+  "https://prefix.dev/pixi-experimental-backends",
+  "https://prefix.dev/conda-forge",
+]
+platforms = ["linux-64", "linux-aarch64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
+
+[package]
+name = "detekt"
+version = "1.23.7"
+description = "Static code analysis tool for the Kotlin programming language"
+license = "Apache-2.0"
+
+[package.build-dependencies]
+openjdk = "17.*"
+
+[package.build.source]
+git = "https://github.com/detekt/detekt.git"
+tag = "v1.23.7"
+
+[package.build.backend]
+name = "pixi-build-gradle"
+version = ">=0.1.0"
+
+[package.build.config]
+tasks = [":detekt-cli:installDist"]
+use-wrapper = true
+
+[package.run-dependencies]
+openjdk = ">=11"
