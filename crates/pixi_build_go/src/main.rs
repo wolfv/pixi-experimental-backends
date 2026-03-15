@@ -100,6 +100,7 @@ impl GenerateRecipe for GoGenerator {
 
         let build_script = BuildScriptContext {
             source_dir: manifest_root.display().to_string(),
+            linker_flags: config.linker_flags.clone(),
             extra_args: config.extra_args.clone(),
             collect_licenses: config.collect_licenses,
             is_bash: !Platform::current().is_windows(),

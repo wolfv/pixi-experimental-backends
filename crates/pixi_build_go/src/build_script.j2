@@ -9,10 +9,15 @@ SET {{ key }}={{ value }}
 {%- endif -%}
 {%- endmacro -%}
 
+{%- if is_bash %}
+cd "{{ source_dir }}"
+{%- else %}
+cd /d "{{ source_dir }}"
+{%- endif %}
 {{ export("GOPATH", env("SRC_DIR") ~ "/gopath") }}
 {{ export("GOBIN", env("PREFIX") ~ "/bin") }}
 
-go install {{ extra_args | join(" ") }} ./...
+go install {% if linker_flags %}-ldflags "{{ linker_flags | join(' ') }}" {% endif %}{{ extra_args | join(" ") }} ./...
 {%- if not is_bash %}
 if errorlevel 1 exit 1
 {%- endif %}

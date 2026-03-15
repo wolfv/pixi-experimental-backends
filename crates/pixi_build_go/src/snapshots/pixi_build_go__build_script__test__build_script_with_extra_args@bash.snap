@@ -2,6 +2,7 @@
 source: crates/pixi_build_go/src/build_script.rs
 expression: script
 ---
+cd "my-prefix-dir"
 export GOPATH=$SRC_DIR/gopath
 export GOBIN=$PREFIX/bin
 

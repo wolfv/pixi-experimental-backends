@@ -17,6 +17,11 @@ pub struct GoBackendConfig {
     #[serde(default)]
     pub collect_licenses: bool,
 
+    /// Linker flags to pass to `go install` via `-ldflags`
+    /// e.g. ["-s", "-w", "-X main.version=1.0.0"]
+    #[serde(default)]
+    pub linker_flags: Vec<String>,
+
     /// Extra args to pass to `go install`
     #[serde(default)]
     pub extra_args: Vec<String>,
@@ -52,6 +57,11 @@ impl BackendConfig for GoBackendConfig {
         Ok(Self {
             cgo_enabled: target_config.cgo_enabled || self.cgo_enabled,
             collect_licenses: target_config.collect_licenses || self.collect_licenses,
+            linker_flags: if target_config.linker_flags.is_empty() {
+                self.linker_flags.clone()
+            } else {
+                target_config.linker_flags.clone()
+            },
             extra_args: if target_config.extra_args.is_empty() {
                 self.extra_args.clone()
             } else {
@@ -108,6 +118,7 @@ mod tests {
         let base_config = GoBackendConfig {
             cgo_enabled: false,
             collect_licenses: false,
+            linker_flags: vec!["-s".to_string()],
             extra_args: vec!["--base-arg".to_string()],
             env: indexmap::IndexMap::from([("BASE_VAR".to_string(), "base_value".to_string())]),
             debug_dir: Some(PathBuf::from("/base/debug")),
@@ -118,6 +129,7 @@ mod tests {
         let target_config = GoBackendConfig {
             cgo_enabled: true,
             collect_licenses: true,
+            linker_flags: vec!["-w".to_string()],
             extra_args: vec!["--target-arg".to_string()],
             env: indexmap::IndexMap::from([("TARGET_VAR".to_string(), "target_value".to_string())]),
             debug_dir: None,
@@ -131,6 +143,7 @@ mod tests {
 
         assert!(merged.cgo_enabled);
         assert!(merged.collect_licenses);
+        assert_eq!(merged.linker_flags, vec!["-w".to_string()]);
         assert_eq!(merged.extra_args, vec!["--target-arg".to_string()]);
         assert_eq!(merged.env.get("BASE_VAR"), Some(&"base_value".to_string()));
         assert_eq!(
