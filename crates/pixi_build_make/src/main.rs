@@ -82,9 +82,7 @@ impl GenerateRecipe for MakeGenerator {
         // make itself
         let make_pkg = SourcePackageName::from("make");
         if !model_dependencies.build.contains_key(&make_pkg) {
-            requirements
-                .build
-                .push("make".parse().into_diagnostic()?);
+            requirements.build.push("make".parse().into_diagnostic()?);
         }
 
         let build_script = BuildScriptContext {

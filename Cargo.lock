@@ -4396,7 +4396,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_meson"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "indexmap 2.13.0",

@@ -73,9 +73,7 @@ impl GenerateRecipe for GradleGenerator {
         if !config.use_wrapper {
             let gradle = SourcePackageName::from("gradle");
             if !model_dependencies.build.contains_key(&gradle) {
-                requirements
-                    .build
-                    .push("gradle".parse().into_diagnostic()?);
+                requirements.build.push("gradle".parse().into_diagnostic()?);
             }
         }
 
