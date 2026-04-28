@@ -4413,6 +4413,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pixi_build_nodejs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "indexmap 2.13.0",
+ "insta",
+ "miette",
+ "minijinja",
+ "pixi_build_backend",
+ "pixi_build_types",
+ "rattler_conda_types",
+ "recipe_stage0",
+ "rstest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "pixi_build_types"
 version = "0.1.0"
 source = "git+https://github.com/prefix-dev/pixi?rev=9a5f03b944fa0dca305543e38c11bcbcacb4b469#9a5f03b944fa0dca305543e38c11bcbcacb4b469"
