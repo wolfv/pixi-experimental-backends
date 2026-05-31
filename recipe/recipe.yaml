@@ -10,6 +10,7 @@ context:
   gradle_version: ${{ env.get('PIXI_BUILD_GRADLE_VERSION', default='0.1.0dev') }}
   make_version: ${{ env.get('PIXI_BUILD_MAKE_VERSION', default='0.1.0dev') }}
   nodejs_version: ${{ env.get('PIXI_BUILD_NODEJS_VERSION', default='0.1.0dev') }}
+  bazel_version: ${{ env.get('PIXI_BUILD_BAZEL_VERSION', default='0.1.0dev') }}
 
 recipe:
   name: pixi-experimental-backends
@@ -54,7 +55,7 @@ outputs:
             then:
               - set "CARGO_TARGET_DIR=${{ SRC_DIR }}\..\..\..\\target-cache-experimental-backends"
           # Build all Rust backends at once
-          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go -p pixi_build_gradle -p pixi_build_make -p pixi_build_nodejs
+          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go -p pixi_build_gradle -p pixi_build_make -p pixi_build_nodejs -p pixi_build_bazel
           # Install binaries to prefix
           - if: unix
             then:
@@ -65,6 +66,7 @@ outputs:
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-gradle $PREFIX/bin/pixi-build-gradle
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-make $PREFIX/bin/pixi-build-make
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-nodejs $PREFIX/bin/pixi-build-nodejs
+              - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-bazel $PREFIX/bin/pixi-build-bazel
           - if: win
             then:
               - if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
@@ -73,6 +75,7 @@ outputs:
               - copy %CARGO_TARGET_DIR%\release\pixi-build-go.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-gradle.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-make.exe %PREFIX%\bin\
+              - copy %CARGO_TARGET_DIR%\release\pixi-build-bazel.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-nodejs.exe %PREFIX%\bin\
           - if: unix
             then: cargo-bundle-licenses --format yaml --output $PREFIX/THIRDPARTY.yml
@@ -287,6 +290,43 @@ outputs:
         Node.js packages. It supports npm, yarn, pnpm, and bun, auto-installs bin entries
         from package.json to $PREFIX/bin, and can create a server launcher for web apps
         (e.g. Next.js standalone builds).
+      license: BSD-3-Clause
+      license_file:
+        - LICENSE
+        - THIRDPARTY.yml
+
+  # === pixi-build-bazel ===
+  - package:
+      name: pixi-build-bazel
+      version: ${{ bazel_version }}
+    inherit: rust-backends-build
+    build:
+      files:
+        - bin/pixi-build-bazel
+        - bin/pixi-build-bazel.exe
+        - LICENSE
+        - THIRDPARTY.yml
+      script:
+        - if: unix
+          then:
+            - mv ${{ PREFIX }}/THIRDPARTY.yml ${{ SRC_DIR }}/THIRDPARTY.yml
+          else:
+            - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
+    requirements:
+      run:
+        - pixi-build-api-version >=4,<5
+    tests:
+      - script: pixi-build-bazel --help
+      - package_contents:
+          bin:
+            - pixi-build-bazel
+    about:
+      homepage: https://github.com/wolfv/pixi-experimental-backends
+      summary: A pixi build backend to build Bazel based packages.
+      description: |
+        This package provides a build backend for pixi that allows building packages using Bazel.
+        It runs `bazel build` on the configured targets and installs the resulting binaries
+        (resolved via `bazel cquery --output=files`) into $PREFIX/bin.
       license: BSD-3-Clause
       license_file:
         - LICENSE

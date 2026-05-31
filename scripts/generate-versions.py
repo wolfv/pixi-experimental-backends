@@ -10,6 +10,8 @@ BACKENDS = {
     "pixi_build_go": "crates/pixi_build_go/Cargo.toml",
     "pixi_build_gradle": "crates/pixi_build_gradle/Cargo.toml",
     "pixi_build_make": "crates/pixi_build_make/Cargo.toml",
+    "pixi_build_nodejs": "crates/pixi_build_nodejs/Cargo.toml",
+    "pixi_build_bazel": "crates/pixi_build_bazel/Cargo.toml",
 }
 
 

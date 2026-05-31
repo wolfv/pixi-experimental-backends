@@ -1,0 +1,45 @@
+{%- if is_bash %}
+cd "{{ source_dir }}"
+
+# Keep Bazel's cache/output base inside the build sandbox so it doesn't leak
+# into $HOME and gets cleaned up with the work directory.
+export BAZEL_OUTPUT_ROOT="${SRC_DIR:-$PWD}/.bazel_root"
+
+bazel --output_user_root="$BAZEL_OUTPUT_ROOT" build {{ extra_args | join(" ") }} {{ targets | join(" ") }}
+
+{%- if install_targets %}
+
+mkdir -p "$PREFIX/bin"
+{%- for target in install_targets %}
+# Install the artifacts produced by {{ target }} into $PREFIX/bin
+for out in $(bazel --output_user_root="$BAZEL_OUTPUT_ROOT" cquery --output=files {{ extra_args | join(" ") }} "{{ target }}"); do
+    if [ -f "$out" ]; then
+        install -m 755 "$out" "$PREFIX/bin/$(basename "$out")"
+    fi
+done
+{%- endfor %}
+{%- endif %}
+
+# Stop the background server so the build can exit cleanly.
+bazel --output_user_root="$BAZEL_OUTPUT_ROOT" shutdown || true
+{%- else %}
+cd /d "{{ source_dir }}"
+
+set "BAZEL_OUTPUT_ROOT=%SRC_DIR%\.bazel_root"
+
+bazel --output_user_root="%BAZEL_OUTPUT_ROOT%" build {{ extra_args | join(" ") }} {{ targets | join(" ") }}
+@if errorlevel 1 exit 1
+
+{%- if install_targets %}
+
+if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
+{%- for target in install_targets %}
+for /f "delims=" %%f in ('bazel --output_user_root^="%BAZEL_OUTPUT_ROOT%" cquery --output^=files {{ extra_args | join(" ") }} "{{ target }}"') do (
+    copy /Y "%%f" "%PREFIX%\bin\"
+    @if errorlevel 1 exit 1
+)
+{%- endfor %}
+{%- endif %}
+
+bazel --output_user_root="%BAZEL_OUTPUT_ROOT%" shutdown
+{%- endif %}

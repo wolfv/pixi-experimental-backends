@@ -11,6 +11,7 @@ systems that aren't covered by the in-tree backends yet.
 | `pixi-build-go` | Go modules (cgo-aware, produces conda packages) |
 | `pixi-build-gradle` | JVM projects built with Gradle (incl. `gradlew`) |
 | `pixi-build-nodejs` | Node.js apps via npm / yarn / pnpm / bun |
+| `pixi-build-bazel` | Projects built with [Bazel](https://bazel.build/) |
 
 All backends speak the pixi build API (`pixi-build-api-version >=4,<5`) and
 are distributed as conda packages on the
@@ -62,6 +63,7 @@ backend:
 - `detekt/` — Kotlin tool built via Gradle wrapper (`pixi-build-gradle`)
 - `nodeserve/` — Node.js CLI wrapping `package.json` `bin` entries
 - `nextjs-app/` — Next.js standalone build with a generated server launcher
+- `buildifier/` — Bazel BUILD-file formatter built from a git tag (`pixi-build-bazel`)
 
 ## Building from source
 
