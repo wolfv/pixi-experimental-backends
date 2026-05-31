@@ -1,0 +1,50 @@
+---
+source: crates/pixi_build_nodejs/src/build_script.rs
+expression: script
+---
+cd "/src/my-app"
+
+# Step 1: Install dependencies
+npm install
+
+# Step 2: Build
+if node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)" 2>/dev/null; then
+  npm run build
+fi
+
+# Step 3: Install files to $PREFIX/share/$PKG_NAME
+INSTALL_DEST="$PREFIX/share/$PKG_NAME"
+mkdir -p "$INSTALL_DEST"
+# Copy project files to install destination (excluding node_modules)
+(cd "/src/my-app" && tar cf - --exclude=./node_modules .) | tar xf - -C "$INSTALL_DEST"
+
+# Step 4: Create launchers in $PREFIX/bin
+mkdir -p "$PREFIX/bin"
+# Auto-create self-relocating launchers for any "bin" entries in package.json
+if [ -f "/src/my-app/package.json" ]; then
+node << 'NODEJS_BIN_INSTALLER_EOF'
+const pkg = require('/src/my-app/package.json');
+const path = require('path');
+const fs = require('fs');
+
+const pkgName = process.env.PKG_NAME;
+const binDir = process.env.PREFIX + '/bin';
+
+if (pkg.bin) {
+    const entries = typeof pkg.bin === 'string'
+        ? { [pkg.name]: pkg.bin }
+        : pkg.bin;
+    for (const [name, script] of Object.entries(entries)) {
+        const rel = script.replace(/^\.\//, '');
+        const launcherPath = path.join(binDir, name);
+        const content = [
+            '#!/usr/bin/env sh',
+            '_prefix="$(cd "$(dirname "$0")/.." && pwd)"',
+            `exec node "\${_prefix}/share/${pkgName}/${rel}" "$@"`,
+        ].join('\n') + '\n';
+        fs.writeFileSync(launcherPath, content, { mode: 0o755 });
+        console.log('pixi-build-nodejs: created bin launcher:', name, '->', rel);
+    }
+}
+NODEJS_BIN_INSTALLER_EOF
+fi

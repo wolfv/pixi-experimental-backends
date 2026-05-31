@@ -1,0 +1,19 @@
+---
+source: crates/pixi_build_nodejs/src/main.rs
+expression: recipe.recipe
+---
+context: {}
+package:
+  name: my-app
+  version: 1.0.0
+source: []
+build:
+  script: "[ ... script ... ]"
+requirements:
+  build:
+    - nodejs
+  host: []
+  run: []
+  run_constraints: []
+tests: []
+about: {}

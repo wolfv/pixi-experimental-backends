@@ -1,0 +1,36 @@
+---
+source: crates/pixi_build_nodejs/src/build_script.rs
+expression: script
+---
+cd /d "/src/my-app"
+
+rem Step 1: Install dependencies
+npm install
+@if errorlevel 1 exit 1
+
+rem Step 2: Build
+node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts.build?0:1)" 2>nul
+@if not errorlevel 1 (
+  npm run build
+  @if errorlevel 1 exit 1
+)
+
+rem Step 3: Install files to %PREFIX%\share\%PKG_NAME%
+set "INSTALL_DEST=%PREFIX%\share\%PKG_NAME%"
+if not exist "%INSTALL_DEST%" mkdir "%INSTALL_DEST%"
+xcopy /E /I /Y "/src/my-app\.next\standalone" "%INSTALL_DEST%\"
+@if errorlevel 1 exit 1
+if not exist "%INSTALL_DEST%\.next\static" mkdir "%INSTALL_DEST%\.next\static"
+xcopy /E /I /Y "/src/my-app\.next\static" "%INSTALL_DEST%\.next\static\"
+@if errorlevel 1 exit 1
+if not exist "%INSTALL_DEST%\public" mkdir "%INSTALL_DEST%\public"
+xcopy /E /I /Y "/src/my-app\public" "%INSTALL_DEST%\public\"
+@if errorlevel 1 exit 1
+
+rem Step 4: Create launchers in %PREFIX%\bin
+if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
+rem Create server launcher at %PREFIX%\bin\%PKG_NAME%.cmd
+(
+echo @echo off
+echo node "%%~dp0..\share\%PKG_NAME%\server.js" %%*
+) > "%PREFIX%\bin\%PKG_NAME%.cmd"

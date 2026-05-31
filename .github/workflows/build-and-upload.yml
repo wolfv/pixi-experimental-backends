@@ -28,6 +28,8 @@ jobs:
       go_version: ${{ steps.bump.outputs.go_version }}
       gradle_version: ${{ steps.bump.outputs.gradle_version }}
       make_version: ${{ steps.bump.outputs.make_version }}
+      nodejs_version: ${{ steps.bump.outputs.nodejs_version }}
+      bazel_version: ${{ steps.bump.outputs.bazel_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +87,12 @@ jobs:
           fi
           if [ -n "${PIXI_BUILD_MAKE_VERSION:-}" ]; then
             git tag "pixi-build-make-v${PIXI_BUILD_MAKE_VERSION}" || true
+          fi
+          if [ -n "${PIXI_BUILD_NODEJS_VERSION:-}" ]; then
+            git tag "pixi-build-nodejs-v${PIXI_BUILD_NODEJS_VERSION}" || true
+          fi
+          if [ -n "${PIXI_BUILD_BAZEL_VERSION:-}" ]; then
+            git tag "pixi-build-bazel-v${PIXI_BUILD_BAZEL_VERSION}" || true
           fi
           git push --tags || true
 

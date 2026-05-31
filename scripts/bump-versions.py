@@ -97,10 +97,15 @@ def main():
         print("No backends changed, nothing to bump.")
         return
 
-    # Update Cargo.lock to match bumped versions
+    # Sync only the workspace member versions in Cargo.lock. We deliberately
+    # avoid `cargo generate-lockfile` here: that re-resolves the whole graph to
+    # the newest semver-compatible versions, which has silently broken the build
+    # before (e.g. a 0.6.4 -> 0.6.5 bump of `sigstore-trust-root` dropped an API
+    # that the pinned rattler-build still calls). `cargo update --workspace`
+    # only touches our own crates and leaves transitive pins intact.
     print("Updating Cargo.lock...")
     subprocess.run(
-        ["cargo", "generate-lockfile"],
+        ["cargo", "update", "--workspace"],
         cwd=repo_root,
         check=True,
     )

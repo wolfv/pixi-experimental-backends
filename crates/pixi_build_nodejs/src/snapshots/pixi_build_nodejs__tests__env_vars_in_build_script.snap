@@ -1,0 +1,8 @@
+---
+source: crates/pixi_build_nodejs/src/main.rs
+expression: recipe.recipe.build.script
+---
+content: "[ ... script ... ]"
+env:
+  NODE_ENV: production
+secrets: []

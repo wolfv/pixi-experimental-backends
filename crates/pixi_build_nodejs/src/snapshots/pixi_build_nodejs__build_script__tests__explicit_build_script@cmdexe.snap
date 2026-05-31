@@ -1,0 +1,31 @@
+---
+source: crates/pixi_build_nodejs/src/build_script.rs
+expression: script
+---
+cd /d "/src/my-app"
+
+rem Step 1: Install dependencies
+npm install
+@if errorlevel 1 exit 1
+
+rem Step 2: Build
+npm run build:prod --verbose
+@if errorlevel 1 exit 1
+
+rem Step 3: Install files to %PREFIX%\share\%PKG_NAME%
+set "INSTALL_DEST=%PREFIX%\share\%PKG_NAME%"
+if not exist "%INSTALL_DEST%" mkdir "%INSTALL_DEST%"
+rem Copy project files excluding node_modules
+for /d %%d in ("/src/my-app\*") do (
+    if /i not "%%~nxd"=="node_modules" (
+        xcopy /E /I /Y "%%d" "%INSTALL_DEST%\%%~nxd\"
+    )
+)
+for %%f in ("/src/my-app\*") do (
+    if not "%%~xf"=="" xcopy /I /Y "%%f" "%INSTALL_DEST%\"
+)
+
+rem Step 4: Create launchers in %PREFIX%\bin
+if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
+rem Auto-create .cmd launchers for any "bin" entries in package.json
+node -e "try{const p=require('/src/my-app/package.json'),fs=require('fs'),pa=require('path'),n=process.env.PKG_NAME,bd=process.env.PREFIX+'\\bin';if(p.bin){const e=typeof p.bin==='string'?{[p.name]:p.bin}:p.bin;for(const[k,v]of Object.entries(e)){const r=v.replace(/^\.\//,'');const lp=pa.join(bd,k+'.cmd');const c='@echo off\r\nnode \"%~dp0..\\share\\'+n+'\\'+r+'\" %*\r\n';fs.writeFileSync(lp,c);console.log('pixi-build-nodejs: created',lp);}}}catch(e){console.error(e)}"
