@@ -11,6 +11,7 @@ context:
   make_version: ${{ env.get('PIXI_BUILD_MAKE_VERSION', default='0.1.0dev') }}
   nodejs_version: ${{ env.get('PIXI_BUILD_NODEJS_VERSION', default='0.1.0dev') }}
   bazel_version: ${{ env.get('PIXI_BUILD_BAZEL_VERSION', default='0.1.0dev') }}
+  hf_kernel_version: ${{ env.get('PIXI_BUILD_HF_KERNEL_VERSION', default='0.1.0dev') }}
 
 recipe:
   name: pixi-experimental-backends
@@ -55,7 +56,7 @@ outputs:
             then:
               - set "CARGO_TARGET_DIR=${{ SRC_DIR }}\..\..\..\\target-cache-experimental-backends"
           # Build all Rust backends at once
-          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go -p pixi_build_gradle -p pixi_build_make -p pixi_build_nodejs -p pixi_build_bazel
+          - cargo auditable build --locked --release --bins -p pixi_build_meson -p pixi_build_autotools -p pixi_build_go -p pixi_build_gradle -p pixi_build_make -p pixi_build_nodejs -p pixi_build_bazel -p pixi_build_hf_kernel
           # Install binaries to prefix
           - if: unix
             then:
@@ -67,6 +68,7 @@ outputs:
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-make $PREFIX/bin/pixi-build-make
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-nodejs $PREFIX/bin/pixi-build-nodejs
               - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-bazel $PREFIX/bin/pixi-build-bazel
+              - install -Dm755 $CARGO_TARGET_DIR/$TARGET/release/pixi-build-hf-kernel $PREFIX/bin/pixi-build-hf-kernel
           - if: win
             then:
               - if not exist "%PREFIX%\bin" mkdir "%PREFIX%\bin"
@@ -77,6 +79,7 @@ outputs:
               - copy %CARGO_TARGET_DIR%\release\pixi-build-make.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-bazel.exe %PREFIX%\bin\
               - copy %CARGO_TARGET_DIR%\release\pixi-build-nodejs.exe %PREFIX%\bin\
+              - copy %CARGO_TARGET_DIR%\release\pixi-build-hf-kernel.exe %PREFIX%\bin\
           - if: unix
             then: cargo-bundle-licenses --format yaml --output $PREFIX/THIRDPARTY.yml
           - if: win
@@ -182,6 +185,45 @@ outputs:
       summary: A pixi build backend to build Go based packages.
       description: |
         This package provides a build backend for pixi that allows building packages using Go.
+      license: BSD-3-Clause
+      license_file:
+        - LICENSE
+        - THIRDPARTY.yml
+
+  # === pixi-build-hf-kernel ===
+  - package:
+      name: pixi-build-hf-kernel
+      version: ${{ hf_kernel_version }}
+    inherit: rust-backends-build
+    build:
+      files:
+        - bin/pixi-build-hf-kernel
+        - bin/pixi-build-hf-kernel.exe
+        - LICENSE
+        - THIRDPARTY.yml
+      script:
+        - if: unix
+          then:
+            - mv ${{ PREFIX }}/THIRDPARTY.yml ${{ SRC_DIR }}/THIRDPARTY.yml
+          else:
+            - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
+    requirements:
+      run:
+        - pixi-build-api-version >=4,<5
+    tests:
+      - script: pixi-build-hf-kernel --help
+      - package_contents:
+          bin:
+            - pixi-build-hf-kernel
+    about:
+      homepage: https://github.com/wolfv/pixi-experimental-backends
+      summary: A pixi build backend that repackages Hugging Face kernels as conda packages.
+      description: |
+        This package provides a build backend for pixi that turns Hugging Face
+        kernels into conda packages. It lists a kernel's prebuilt build variants
+        on the Hub and emits one conda output per variant, each constrained by
+        pytorch, __cuda and __cuda_arch, so the solver selects the best-fitting
+        kernel for the machine and the lockfile pins it.
       license: BSD-3-Clause
       license_file:
         - LICENSE
