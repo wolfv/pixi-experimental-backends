@@ -94,6 +94,9 @@ jobs:
           if [ -n "${PIXI_BUILD_BAZEL_VERSION:-}" ]; then
             git tag "pixi-build-bazel-v${PIXI_BUILD_BAZEL_VERSION}" || true
           fi
+          if [ -n "${PIXI_BUILD_HF_KERNEL_VERSION:-}" ]; then
+            git tag "pixi-build-hf-kernel-v${PIXI_BUILD_HF_KERNEL_VERSION}" || true
+          fi
           git push --tags || true
 
   build:

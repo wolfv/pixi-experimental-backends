@@ -12,6 +12,7 @@ BACKENDS = {
     "pixi_build_make": "crates/pixi_build_make/Cargo.toml",
     "pixi_build_nodejs": "crates/pixi_build_nodejs/Cargo.toml",
     "pixi_build_bazel": "crates/pixi_build_bazel/Cargo.toml",
+    "pixi_build_hf_kernel": "crates/pixi_build_hf_kernel/Cargo.toml",
 }
 
 

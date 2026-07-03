@@ -4395,6 +4395,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pixi_build_hf_kernel"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "miette",
+ "pixi_build_backend",
+ "pixi_build_types",
+ "rattler_conda_types",
+ "rattler_digest",
+ "rattler_package_streaming",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml",
+]
+
+[[package]]
 name = "pixi_build_make"
 version = "0.1.2"
 dependencies = [
