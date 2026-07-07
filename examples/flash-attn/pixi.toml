@@ -1,0 +1,39 @@
+# Demo: build the `flash-attn` Hugging Face kernel as a conda package via the
+# pixi-build-hf-kernel backend.
+#
+#   pixi install        # solver picks the variant matching pytorch + __cuda(_arch)
+#   cat pixi.lock       # the chosen variant is pinned here
+#
+# The backend lists `build/` on the Hub, resolves `rev` to a commit sha, and
+# emits one conda build per variant; the solver installs the satisfiable one.
+# (Requires a Linux + CUDA host — the variants carry __cuda / __cuda_arch pins.)
+
+[workspace]
+channels = [
+  "https://prefix.dev/pixi-experimental-backends",
+  "https://prefix.dev/conda-forge",
+]
+platforms = ["linux-64", "linux-aarch64"]
+preview = ["pixi-build"]
+
+[package]
+name = "flash-attn"
+version = "2.7.0"
+description = "flash-attn Hugging Face kernel, repackaged as a conda package"
+
+[package.build.backend]
+name = "pixi-build-hf-kernel"
+version = ">=0.1.0"
+
+[package.build.config]
+repo = "kernels-community/flash-attn"
+rev = "main"                    # backend resolves this to a concrete commit sha
+require-cxx11 = true
+# Offline/deterministic alternative (skips the Hub listing):
+#   variants = ["torch26-cxx11-cu118-x86_64-linux", "torch27-cxx11-cu126-x86_64-linux"]
+#   cuda-capabilities = ["8.0", "9.0"]
+
+# The workspace consumes the package it builds.
+[dependencies]
+flash-attn = { path = "." }
+pytorch = ">=2.6"
