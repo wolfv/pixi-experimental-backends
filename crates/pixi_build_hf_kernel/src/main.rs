@@ -7,7 +7,7 @@
 //! — so it can't emit a *backend-fetched, per-repo* set of variants. Implementing
 //! `conda_outputs` directly lets us list the Hub and hand the solver ONE
 //! `CondaOutput` per variant, each carrying its own `pytorch` / `__cuda` /
-//! `__cuda_arch` matchspecs. The solver picks the satisfiable one; pixi locks it.
+//! `cuda-arch` matchspecs. The solver picks the satisfiable one; pixi locks it.
 //!
 //! Mode A = repackage: `conda_build_v1` (the actual build) downloads the chosen
 //! `build/<variant>` subtree and lays it into the host Python's site-packages.
@@ -128,7 +128,7 @@ impl Protocol for HfKernelBackend {
             package_name: name.clone(),
             version: version.clone(),
             build_number: 0,
-            cuda_capabilities: caps.clone(),
+            cuda_capabilities: Vec::new(),
             require_cxx11: cfg.require_cxx11,
         };
         let (records, skipped) = build_all_records(&variant_names, &opts);
@@ -143,15 +143,25 @@ impl Protocol for HfKernelBackend {
             .filter(|r| r.subdir == host_str)
             .collect();
 
-        let arch_floor = cuda_arch_floor(&caps);
+        let fallback_arch_floor = cuda_arch_floor(&caps);
         let mut outputs = Vec::with_capacity(records.len());
         for r in &records {
+            let metadata_archs = if cfg.variants.is_some() {
+                Vec::new()
+            } else {
+                hub::read_variant_metadata(&self.client, &cfg.repo, &resolved_rev, &r.variant)
+                    .await?
+                    .and_then(|m| m.backend)
+                    .map(|b| b.archs)
+                    .unwrap_or_default()
+            };
+            let metadata_arch_floor = cuda_arch_floor(&metadata_archs);
             outputs.push(conda_output(
                 r,
                 &name,
                 &version,
                 host,
-                arch_floor.as_deref(),
+                metadata_arch_floor.as_deref().or(fallback_arch_floor.as_deref()),
                 &resolved_rev,
             )?);
         }
@@ -301,20 +311,20 @@ fn conda_output(
     arch_floor: Option<&str>,
     sha: &str,
 ) -> Result<CondaOutput> {
-    let depends = r
+    let mut depends = r
         .depends
         .iter()
         .map(|s| named_package(s))
         .collect::<Result<Vec<_>>>()?;
+    if let Some(floor) = arch_floor {
+        depends.push(named_package(&format!("cuda-arch >={floor}"))?);
+    }
 
-    let mut constraints = r
+    let constraints = r
         .constrains
         .iter()
         .map(|s| named_constraint(s))
         .collect::<Result<Vec<_>>>()?;
-    if let Some(floor) = arch_floor {
-        constraints.push(named_constraint(&format!("__cuda_arch >={floor}"))?);
-    }
 
     let metadata = CondaOutputMetadata {
         name: PackageName::from_str(name).into_diagnostic()?,
@@ -616,8 +626,9 @@ mod tests {
             .map(|d| d.name.to_string())
             .collect();
         assert!(dep_names.contains("pytorch"));
+        assert!(dep_names.contains("cuda-arch"));
 
-        // The solver-selection constraints: __cuda floor, cuda-version, __cuda_arch floor.
+        // The solver-selection metadata: __cuda floor, cuda-version, cuda-arch floor.
         let con_names: BTreeSet<_> = o
             .run_dependencies
             .constraints
@@ -626,6 +637,5 @@ mod tests {
             .collect();
         assert!(con_names.contains("__cuda"), "constraints: {con_names:?}");
         assert!(con_names.contains("cuda-version"));
-        assert!(con_names.contains("__cuda_arch"));
     }
 }

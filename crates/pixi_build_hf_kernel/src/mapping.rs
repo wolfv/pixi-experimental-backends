@@ -10,7 +10,7 @@
 //! | `cxx98` / `cxx11`      | filter (conda-forge is cxx11-ABI only)    |
 //! | `cu118`                | `constrains: __cuda >=11.8` + cuda-version|
 //! | `x86_64` / `linux`     | `subdir: linux-64`                        |
-//! | compute capabilities   | `constrains: __cuda_arch >=<min>` (CEP46) |
+//! | compute capabilities   | `depends: cuda-arch >=<min>` (gated by __cuda_arch) |
 
 use thiserror::Error;
 
@@ -125,13 +125,12 @@ pub fn map_variant(
         ComputeKind::Metal => {}
     }
 
-    // --- compute capability -> __cuda_arch (CEP 0046) ------------------------
+    // --- compute capability -> cuda-arch (gated by __cuda_arch) --------------
     if variant.compute_kind == ComputeKind::Cuda && !opts.cuda_capabilities.is_empty() {
         if let Some(floor) = min_capability(&opts.cuda_capabilities) {
-            // A fatbin built for {8.0, 9.0} needs a GPU of at least the lowest
-            // capability present; higher GPUs stay compatible (same-major SASS /
-            // PTX JIT). Refuse anything below the floor rather than crash at load.
-            constrains.push(format!("__cuda_arch >={floor}"));
+            // cuda-arch is the real metapackage; it carries the __cuda_arch
+            // virtual-package constraint from conda-forge.
+            depends.push(format!("cuda-arch >={floor}"));
         }
     }
 
@@ -228,7 +227,7 @@ mod tests {
         let mut o = opts();
         o.cuda_capabilities = vec!["9.0".into(), "8.0".into(), "8.6".into()];
         let rec = map_variant(&v, &o).unwrap();
-        assert!(rec.constrains.contains(&"__cuda_arch >=8.0".to_string()));
+        assert!(rec.depends.contains(&"cuda-arch >=8.0".to_string()));
     }
 
     #[test]

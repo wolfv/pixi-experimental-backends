@@ -5,6 +5,7 @@ use std::path::Path;
 
 use miette::{IntoDiagnostic, Result, miette};
 use reqwest::Client;
+use serde::Deserialize;
 use serde_json::Value as Json;
 
 const BASE: &str = "https://huggingface.co";
@@ -75,6 +76,31 @@ pub async fn download_file(
     }
     let bytes = get(client, &url).await?.bytes().await.into_diagnostic()?;
     std::fs::write(dest, &bytes).into_diagnostic()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VariantMetadata {
+    pub backend: Option<VariantBackend>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VariantBackend {
+    #[serde(default)]
+    pub archs: Vec<String>,
+}
+
+pub async fn read_variant_metadata(
+    client: &Client,
+    repo: &str,
+    rev: &str,
+    variant: &str,
+) -> Result<Option<VariantMetadata>> {
+    let url = format!("{BASE}/{repo}/resolve/{rev}/build/{variant}/metadata.json");
+    let resp = client.get(&url).send().await.into_diagnostic()?;
+    if !resp.status().is_success() {
+        return Ok(None);
+    }
+    resp.json().await.map(Some).into_diagnostic()
 }
 
 /// Read `[kernel.*].cuda-capabilities` (union) from build.toml; `[]` if absent.

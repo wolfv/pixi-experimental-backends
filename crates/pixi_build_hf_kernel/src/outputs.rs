@@ -1,7 +1,7 @@
 //! Enumerate *all* build variants of a kernel as conda output records.
 //!
 //! The solver, not us, decides which variant is "best" for a given host: we
-//! hand it every compatible variant (each with its `__cuda` / `__cuda_arch` /
+//! hand it every compatible variant (each with its `__cuda` / `cuda-arch` /
 //! `pytorch` constraints) and let unification pick the one whose constraints
 //! the host virtual packages and environment satisfy. Variants we can't
 //! express (cxx98, or an OS/arch with no conda subdir) are dropped with a reason.
