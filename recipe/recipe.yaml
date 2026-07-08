@@ -4,14 +4,14 @@ schema_version: 1
 
 context:
   api_version: "5"
-  meson_version: ${{ env.get('PIXI_BUILD_MESON_VERSION', default='0.1.0dev') }}
-  autotools_version: ${{ env.get('PIXI_BUILD_AUTOTOOLS_VERSION', default='0.1.0dev') }}
-  go_version: ${{ env.get('PIXI_BUILD_GO_VERSION', default='0.1.0dev') }}
-  gradle_version: ${{ env.get('PIXI_BUILD_GRADLE_VERSION', default='0.1.0dev') }}
-  make_version: ${{ env.get('PIXI_BUILD_MAKE_VERSION', default='0.1.0dev') }}
-  nodejs_version: ${{ env.get('PIXI_BUILD_NODEJS_VERSION', default='0.1.0dev') }}
-  bazel_version: ${{ env.get('PIXI_BUILD_BAZEL_VERSION', default='0.1.0dev') }}
-  hf_kernel_version: ${{ env.get('PIXI_BUILD_HF_KERNEL_VERSION', default='0.1.0dev') }}
+  meson_version: ${{ env.get('PIXI_BUILD_MESON_VERSION', default='0.1.6') }}
+  autotools_version: ${{ env.get('PIXI_BUILD_AUTOTOOLS_VERSION', default='0.1.5') }}
+  go_version: ${{ env.get('PIXI_BUILD_GO_VERSION', default='0.1.5') }}
+  gradle_version: ${{ env.get('PIXI_BUILD_GRADLE_VERSION', default='0.1.4') }}
+  make_version: ${{ env.get('PIXI_BUILD_MAKE_VERSION', default='0.1.4') }}
+  nodejs_version: ${{ env.get('PIXI_BUILD_NODEJS_VERSION', default='0.1.3') }}
+  bazel_version: ${{ env.get('PIXI_BUILD_BAZEL_VERSION', default='0.1.3') }}
+  hf_kernel_version: ${{ env.get('PIXI_BUILD_HF_KERNEL_VERSION', default='0.1.1') }}
 
 recipe:
   name: pixi-experimental-backends
