@@ -3,7 +3,7 @@
 schema_version: 1
 
 context:
-  api_version: "4"
+  api_version: "5"
   meson_version: ${{ env.get('PIXI_BUILD_MESON_VERSION', default='0.1.0dev') }}
   autotools_version: ${{ env.get('PIXI_BUILD_AUTOTOOLS_VERSION', default='0.1.0dev') }}
   go_version: ${{ env.get('PIXI_BUILD_GO_VERSION', default='0.1.0dev') }}
@@ -104,7 +104,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-meson --help
       - package_contents:
@@ -139,7 +139,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-autotools --help
       - package_contents:
@@ -174,7 +174,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-go --help
       - package_contents:
@@ -209,7 +209,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-hf-kernel --help
       - package_contents:
@@ -248,7 +248,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-gradle --help
       - package_contents:
@@ -283,7 +283,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-make --help
       - package_contents:
@@ -318,7 +318,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-nodejs --help
       - package_contents:
@@ -356,7 +356,7 @@ outputs:
             - move ${{ PREFIX }}\THIRDPARTY.yml ${{ SRC_DIR }}\THIRDPARTY.yml
     requirements:
       run:
-        - pixi-build-api-version >=4,<5
+        - pixi-build-api-version >=5,<6
     tests:
       - script: pixi-build-bazel --help
       - package_contents:
