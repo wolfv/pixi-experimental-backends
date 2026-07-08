@@ -1,13 +1,12 @@
 # Demo: build the `flash-attn` Hugging Face kernel as a conda package via the
 # pixi-build-hf-kernel backend.
 #
-#   pixi install        # solver picks the variant matching pytorch + __cuda(_arch)
+#   pixi install        # builds a CUDA variant matching pytorch + __cuda(_arch)
 #   pixi run start      # print kernel metadata and run a tiny attention smoke test
 #   cat pixi.lock       # the chosen variant is pinned here
 #
-# The backend lists `build/` on the Hub, resolves `rev` to a commit sha, and
-# emits one conda build per variant; the solver installs the satisfiable one.
-# (Requires a Linux + CUDA host — the variants carry __cuda / __cuda_arch pins.)
+# This example pins the demo to CUDA variants so `pixi run start` exercises the
+# GPU kernel instead of a satisfiable CPU build.
 
 [workspace]
 channels = [
@@ -30,9 +29,15 @@ version = ">=0.1.0"
 repo = "kernels-community/flash-attn"
 rev = "main"                    # backend resolves this to a concrete commit sha
 require-cxx11 = true
-# Offline/deterministic alternative (skips the Hub listing):
-#   variants = ["torch26-cxx11-cu118-x86_64-linux", "torch27-cxx11-cu126-x86_64-linux"]
-#   cuda-capabilities = ["8.0", "9.0"]
+variants = [
+  "torch212-cxx11-cu126-aarch64-linux",
+  "torch212-cxx11-cu126-x86_64-linux",
+  "torch212-cxx11-cu130-aarch64-linux",
+  "torch212-cxx11-cu130-x86_64-linux",
+  "torch212-cxx11-cu132-aarch64-linux",
+  "torch212-cxx11-cu132-x86_64-linux",
+]
+cuda-capabilities = ["8.0", "9.0"]
 
 # The workspace consumes the package it builds.
 [dependencies]

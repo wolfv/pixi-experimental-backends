@@ -11,6 +11,9 @@ print(f"kernel: {metadata['name']} v{metadata['version']}")
 print(f"backend: {metadata['backend']['type']} archs={metadata['backend'].get('archs', [])}")
 print(f"torch: {torch.__version__}")
 
+if metadata["backend"]["type"] != "cuda":
+    raise SystemExit("selected a non-CUDA kernel; run `pixi update` with the latest example")
+
 if not torch.cuda.is_available():
     print("cuda: unavailable; import smoke-test only")
     raise SystemExit
