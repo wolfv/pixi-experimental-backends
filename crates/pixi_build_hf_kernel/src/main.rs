@@ -10,7 +10,7 @@
 //! `__cuda_arch` matchspecs. The solver picks the satisfiable one; pixi locks it.
 //!
 //! Mode A = repackage: `conda_build_v1` (the actual build) downloads the chosen
-//! `build/<variant>` subtree and lays it into site-packages.
+//! `build/<variant>` subtree and lays it into the host Python's site-packages.
 
 mod build;
 mod config;
@@ -186,6 +186,7 @@ impl Protocol for HfKernelBackend {
 
         let depends = matchspec_strings(&params.run_dependencies);
         let constrains = matchspec_strings(&params.run_constraints);
+        let python_site_packages_path = host_python_site_packages_path(&params)?;
 
         let out_dir = params
             .output_directory
@@ -205,6 +206,7 @@ impl Protocol for HfKernelBackend {
             constrains,
             work_dir: &params.work_directory,
             out_dir: &out_dir,
+            python_site_packages_path: &python_site_packages_path,
         };
 
         let output_file = build::build_package(&self.client, &req).await?;
@@ -235,6 +237,36 @@ fn matchspec_strings(deps: &Option<Vec<CondaBuildV1Dependency>>) -> Vec<String> 
         .iter()
         .map(|d| d.spec.to_string())
         .collect()
+}
+
+fn host_python_site_packages_path(params: &CondaBuildV1Params) -> Result<String> {
+    let host = params
+        .host_prefix
+        .as_ref()
+        .ok_or_else(|| miette!("host prefix with python is required"))?;
+    let python = host
+        .packages
+        .iter()
+        .find(|p| p.repodata_record.package_record.name.as_normalized() == "python")
+        .ok_or_else(|| miette!("host prefix is missing python"))?;
+
+    if let Some(path) = &python.repodata_record.package_record.python_site_packages_path {
+        return Ok(path.clone());
+    }
+
+    let (major, minor) = python
+        .repodata_record
+        .package_record
+        .version
+        .version()
+        .as_major_minor()
+        .ok_or_else(|| miette!("invalid python version"))?;
+
+    Ok(if host.platform.is_windows() {
+        "Lib/site-packages".to_string()
+    } else {
+        format!("lib/python{major}.{minor}/site-packages")
+    })
 }
 
 impl HfKernelBackend {
@@ -313,7 +345,10 @@ fn conda_output(
     Ok(CondaOutput {
         metadata,
         build_dependencies: None,
-        host_dependencies: None,
+        host_dependencies: Some(CondaOutputDependencies {
+            depends: vec![named_package("python")?],
+            constraints: Vec::new(),
+        }),
         run_dependencies: CondaOutputDependencies {
             depends,
             constraints,
@@ -384,6 +419,7 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     fn backend() -> HfKernelBackend {
         let config = HfKernelConfig {
@@ -501,10 +537,12 @@ mod tests {
             run_dependencies: None,
             run_constraints: None,
             run_exports: None,
+            extra_dependencies: BTreeMap::new(),
             output,
             work_directory: work.clone(),
             output_directory: Some(out_dir.clone()),
             editable: None,
+            package_format: None,
         };
 
         let cfg = HfKernelConfig {
@@ -575,7 +613,7 @@ mod tests {
             .run_dependencies
             .depends
             .iter()
-            .map(|d| d.name.clone())
+            .map(|d| d.name.to_string())
             .collect();
         assert!(dep_names.contains("pytorch"));
 
@@ -584,7 +622,7 @@ mod tests {
             .run_dependencies
             .constraints
             .iter()
-            .map(|c| c.name.clone())
+            .map(|c| c.name.to_string())
             .collect();
         assert!(con_names.contains("__cuda"), "constraints: {con_names:?}");
         assert!(con_names.contains("cuda-version"));

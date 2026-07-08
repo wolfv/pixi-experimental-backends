@@ -4415,7 +4415,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_hf_kernel"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "miette",

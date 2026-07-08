@@ -1,12 +1,8 @@
 //! Mode A build: download a prebuilt HF variant and pack it into a `.conda`.
 //!
-//! No compilation. We snapshot `build/<variant>/` at the pinned commit into a
-//! staging prefix under `site-packages/`, synthesize `info/index.json` +
-//! `info/paths.json`, and write the `.conda` with rattler's package writer.
-//!
-//! Files are placed under `site-packages/` and the package declares
-//! `python_site_packages_path` (CEP-17) so a Python-version-independent, but
-//! architecture-specific, kernel relocates to the env's real site-packages.
+//! No compilation. We snapshot `build/<variant>/` at the pinned commit into the
+//! host Python's site-packages, synthesize `info/index.json` + `info/paths.json`,
+//! and write the `.conda` with rattler's package writer.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,16 +27,17 @@ pub struct BuildRequest<'a> {
     pub constrains: Vec<String>,
     pub work_dir: &'a Path,
     pub out_dir: &'a Path,
+    pub python_site_packages_path: &'a str,
 }
 
 /// Build the package and return the path to the written `.conda`.
 pub async fn build_package(client: &reqwest::Client, req: &BuildRequest<'_>) -> Result<PathBuf> {
-    // 1. Fresh staging prefix with a site-packages/ root.
+    // 1. Fresh staging prefix with the host Python's site-packages root.
     let staging = req.work_dir.join("prefix");
     if staging.exists() {
         fs::remove_dir_all(&staging).into_diagnostic()?;
     }
-    let sp = staging.join("site-packages");
+    let sp = staging.join(req.python_site_packages_path);
     fs::create_dir_all(&sp).into_diagnostic()?;
 
     // 2. Download build/<variant>/* into site-packages/.
@@ -75,8 +72,7 @@ pub async fn build_package(client: &reqwest::Client, req: &BuildRequest<'_>) -> 
         noarch: NoArchType::none(),
         platform: None,
         purls: None,
-        // CEP-17: relocate site-packages/ to the env python's site-packages.
-        python_site_packages_path: Some("site-packages".to_string()),
+        python_site_packages_path: None,
         subdir: Some(req.subdir.to_string()),
         repodata_revision: None,
         timestamp: None,
@@ -93,7 +89,7 @@ pub async fn build_package(client: &reqwest::Client, req: &BuildRequest<'_>) -> 
         let sha = rattler_digest::compute_file_digest::<rattler_digest::Sha256>(&abs)
             .into_diagnostic()?;
         entries.push(PathsEntry {
-            relative_path: PathBuf::from(format!("site-packages/{rel}")),
+            relative_path: PathBuf::from(req.python_site_packages_path).join(rel),
             no_link: false,
             path_type: PathType::HardLink,
             prefix_placeholder: None,
