@@ -3,7 +3,7 @@ description = "Node.js build backend for Pixi"
 edition.workspace = true
 license.workspace = true
 name = "pixi_build_nodejs"
-version = "0.1.5"
+version = "0.1.6"
 
 [[bin]]
 name = "pixi-build-nodejs"
