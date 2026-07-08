@@ -3,7 +3,7 @@ description = "Gradle build backend for Pixi"
 edition.workspace = true
 license.workspace = true
 name = "pixi_build_gradle"
-version = "0.1.4"
+version = "0.1.5"
 
 [[bin]]
 name = "pixi-build-gradle"
