@@ -3,7 +3,7 @@ description = "Bazel build backend for Pixi"
 edition.workspace = true
 license.workspace = true
 name = "pixi_build_bazel"
-version = "0.1.10"
+version = "0.1.11"
 
 [[bin]]
 name = "pixi-build-bazel"
