@@ -11,7 +11,7 @@ context:
   make_version: ${{ env.get('PIXI_BUILD_MAKE_VERSION', default='0.1.4') }}
   nodejs_version: ${{ env.get('PIXI_BUILD_NODEJS_VERSION', default='0.1.3') }}
   bazel_version: ${{ env.get('PIXI_BUILD_BAZEL_VERSION', default='0.1.3') }}
-  hf_kernel_version: ${{ env.get('PIXI_BUILD_HF_KERNEL_VERSION', default='0.1.2') }}
+  hf_kernel_version: ${{ env.get('PIXI_BUILD_HF_KERNEL_VERSION', default='0.1.3') }}
 
 recipe:
   name: pixi-experimental-backends

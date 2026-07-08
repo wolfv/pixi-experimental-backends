@@ -117,7 +117,12 @@ pub fn map_variant(
                 .expect("rocm has version");
             constrains.push(format!("__hip >={v}"));
         }
-        ComputeKind::Cpu | ComputeKind::Metal => {}
+        ComputeKind::Cpu => {
+            // Keep CPU kernels installable on non-CUDA hosts, but let any real
+            // __cuda virtual package rule them out so CUDA kernels win.
+            constrains.push("__cuda ==0".to_string());
+        }
+        ComputeKind::Metal => {}
     }
 
     // --- compute capability -> __cuda_arch (CEP 0046) ------------------------
@@ -224,6 +229,13 @@ mod tests {
         o.cuda_capabilities = vec!["9.0".into(), "8.0".into(), "8.6".into()];
         let rec = map_variant(&v, &o).unwrap();
         assert!(rec.constrains.contains(&"__cuda_arch >=8.0".to_string()));
+    }
+
+    #[test]
+    fn cpu_is_excluded_when_cuda_is_available() {
+        let v = parse_variant("torch26-cxx11-cpu-x86_64-linux").unwrap();
+        let rec = map_variant(&v, &opts()).unwrap();
+        assert!(rec.constrains.contains(&"__cuda ==0".to_string()));
     }
 
     #[test]
