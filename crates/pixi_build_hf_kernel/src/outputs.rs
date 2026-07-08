@@ -6,7 +6,7 @@
 //! the host virtual packages and environment satisfy. Variants we can't
 //! express (cxx98, or an OS/arch with no conda subdir) are dropped with a reason.
 
-use crate::mapping::{map_variant, CondaRecord, MapOptions};
+use crate::mapping::{CondaRecord, MapOptions, map_variant};
 use crate::variant::parse_variant;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,7 +74,10 @@ mod tests {
         let got: BTreeSet<_> = records.iter().map(|r| r.variant.as_str()).collect();
         assert_eq!(
             got,
-            BTreeSet::from(["torch26-cxx11-cu118-x86_64-linux", "torch27-cxx11-cu126-aarch64-linux"])
+            BTreeSet::from([
+                "torch26-cxx11-cu118-x86_64-linux",
+                "torch27-cxx11-cu126-aarch64-linux"
+            ])
         );
         assert_eq!(skipped.len(), 3);
 

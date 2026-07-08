@@ -44,8 +44,8 @@ pub struct Variant {
     pub cxx_abi: String,           // "cxx98" | "cxx11"
     pub compute_kind: ComputeKind,
     pub compute_version: Option<String>, // "11.8" for cuda/rocm, None for cpu/metal
-    pub arch: String,                     // "x86_64" | "aarch64"
-    pub os: String,                       // "linux"
+    pub arch: String,                    // "x86_64" | "aarch64"
+    pub os: String,                      // "linux"
 }
 
 impl Variant {

@@ -55,7 +55,7 @@ pub fn subdir_for(variant: &Variant) -> Result<&'static str, UnsupportedVariant>
             return Err(UnsupportedVariant::NoSubdir {
                 arch: variant.arch.clone(),
                 os: variant.os.clone(),
-            })
+            });
         }
     };
     Ok(sd)
@@ -73,7 +73,10 @@ pub struct MapOptions {
 }
 
 /// Turn one build variant into a [`CondaRecord`].
-pub fn map_variant(variant: &Variant, opts: &MapOptions) -> Result<CondaRecord, UnsupportedVariant> {
+pub fn map_variant(
+    variant: &Variant,
+    opts: &MapOptions,
+) -> Result<CondaRecord, UnsupportedVariant> {
     // Drop only the pre-C++11 ABI; Windows/metal variants carry no ABI tag and
     // have no libstdc++ ABI concern, so they stay.
     if opts.require_cxx11 && variant.is_cxx98() {
@@ -96,7 +99,10 @@ pub fn map_variant(variant: &Variant, opts: &MapOptions) -> Result<CondaRecord, 
     let mut cuda_floor = None;
     match variant.compute_kind {
         ComputeKind::Cuda => {
-            let v = variant.compute_version.as_deref().expect("cuda has version");
+            let v = variant
+                .compute_version
+                .as_deref()
+                .expect("cuda has version");
             cuda_floor = Some(v.to_string());
             // __cuda reports the driver's max supported CUDA version; the driver
             // must be at least as new as the toolkit the kernel was built against.
@@ -105,7 +111,10 @@ pub fn map_variant(variant: &Variant, opts: &MapOptions) -> Result<CondaRecord, 
             constrains.push(format!("cuda-version >={v}"));
         }
         ComputeKind::Rocm => {
-            let v = variant.compute_version.as_deref().expect("rocm has version");
+            let v = variant
+                .compute_version
+                .as_deref()
+                .expect("rocm has version");
             constrains.push(format!("__hip >={v}"));
         }
         ComputeKind::Cpu | ComputeKind::Metal => {}
@@ -175,12 +184,10 @@ pub fn cuda_arch_floor(caps: &[String]) -> Option<String> {
 
 /// Lowest capability in the list, normalized to `major.minor`.
 fn min_capability(caps: &[String]) -> Option<String> {
-    caps.iter()
-        .min_by_key(|c| cap_key(c))
-        .map(|c| {
-            let (maj, min) = cap_key(c);
-            format!("{maj}.{min}")
-        })
+    caps.iter().min_by_key(|c| cap_key(c)).map(|c| {
+        let (maj, min) = cap_key(c);
+        format!("{maj}.{min}")
+    })
 }
 
 #[cfg(test)]
@@ -224,7 +231,9 @@ mod tests {
         let v = parse_variant("torch26-cxx98-cu118-x86_64-linux").unwrap();
         assert_eq!(
             map_variant(&v, &opts()),
-            Err(UnsupportedVariant::Cxx98("torch26-cxx98-cu118-x86_64-linux".into()))
+            Err(UnsupportedVariant::Cxx98(
+                "torch26-cxx98-cu118-x86_64-linux".into()
+            ))
         );
     }
 }

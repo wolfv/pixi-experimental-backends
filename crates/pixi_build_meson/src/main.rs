@@ -7,20 +7,31 @@ use miette::IntoDiagnostic;
 use pixi_build_backend::{
     generated_recipe::{DefaultMetadataProvider, GenerateRecipe, GeneratedRecipe, PythonParams},
     intermediate_backend::IntermediateBackendInstantiator,
-    traits::ProjectModel,
 };
-use pixi_build_types::SourcePackageName;
 use rattler_build_jinja::Variable;
+use rattler_build_recipe::stage0::{ConditionalList, Item, Script, SerializableMatchSpec, Value};
 use rattler_build_types::NormalizedKey;
 use rattler_conda_types::{ChannelUrl, Platform};
-use recipe_stage0::recipe::Script;
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    path::Path,
-    sync::Arc,
-};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
+
+fn req(name: impl Into<String>) -> Item<SerializableMatchSpec> {
+    Item::Value(Value::new_concrete(name.into().parse().unwrap(), None))
+}
+
+fn script(content: String, env: indexmap::IndexMap<String, String>) -> Script {
+    Script {
+        content: Some(ConditionalList::new(vec![Item::Value(
+            Value::new_concrete(content, None),
+        )])),
+        env: env
+            .into_iter()
+            .map(|(k, v)| (k, Value::new_concrete(v, None)))
+            .collect(),
+        ..Default::default()
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct MesonGenerator {}
@@ -34,11 +45,14 @@ impl GenerateRecipe for MesonGenerator {
         model: &pixi_build_types::ProjectModel,
         config: &Self::Config,
         manifest_path: PathBuf,
-        host_platform: Platform,
+        _host_platform: Platform,
         _python_params: Option<PythonParams>,
         variants: &HashSet<NormalizedKey>,
         _channels: Vec<ChannelUrl>,
         _cache_dir: Option<PathBuf>,
+        _workspace_scratch_directory: Option<PathBuf>,
+        _workspace_directory: Option<PathBuf>,
+        _checkout_root: Option<PathBuf>,
     ) -> miette::Result<GeneratedRecipe> {
         let manifest_root = if manifest_path.is_file() {
             manifest_path
@@ -60,8 +74,6 @@ impl GenerateRecipe for MesonGenerator {
 
         let requirements = &mut generated_recipe.recipe.requirements;
 
-        let model_dependencies = model.dependencies(Some(host_platform));
-
         // Get the list of compilers from config, defaulting to ["cxx"] if not specified
         let compilers = config
             .compilers
@@ -71,8 +83,6 @@ impl GenerateRecipe for MesonGenerator {
         pixi_build_backend::compilers::add_compilers_to_requirements(
             &compilers,
             &mut requirements.build,
-            &model_dependencies,
-            &host_platform,
         );
         pixi_build_backend::compilers::add_stdlib_to_requirements(
             &compilers,
@@ -82,10 +92,7 @@ impl GenerateRecipe for MesonGenerator {
 
         // Add necessary build tools: meson, ninja, pkg-config
         for tool in ["meson", "ninja", "pkg-config"] {
-            let tool_name = SourcePackageName::from(tool);
-            if !model_dependencies.build.contains_key(&tool_name) {
-                requirements.build.push(tool.parse().into_diagnostic()?);
-            }
+            requirements.build.push(req(tool));
         }
 
         let build_script = BuildScriptContext {
@@ -99,11 +106,7 @@ impl GenerateRecipe for MesonGenerator {
         }
         .render();
 
-        generated_recipe.recipe.build.script = Script {
-            content: build_script,
-            env: config.env.clone(),
-            ..Default::default()
-        };
+        generated_recipe.recipe.build.script = script(build_script, config.env.clone());
 
         Ok(generated_recipe)
     }
@@ -113,7 +116,7 @@ impl GenerateRecipe for MesonGenerator {
         config: &Self::Config,
         _workdir: impl AsRef<Path>,
         _editable: bool,
-    ) -> miette::Result<BTreeSet<String>> {
+    ) -> miette::Result<Vec<String>> {
         Ok([
             // Source files
             "**/*.{c,cc,cxx,cpp,h,hpp,hxx}",
@@ -146,7 +149,14 @@ impl GenerateRecipe for MesonGenerator {
 #[tokio::main]
 pub async fn main() {
     if let Err(err) = pixi_build_backend::cli::main(|log| {
-        IntermediateBackendInstantiator::<MesonGenerator>::new(log, Arc::default())
+        IntermediateBackendInstantiator::<MesonGenerator>::new(
+            pixi_build_backend::tools::BackendIdentifier::new(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ),
+            log,
+            Arc::default(),
+        )
     })
     .await
     {

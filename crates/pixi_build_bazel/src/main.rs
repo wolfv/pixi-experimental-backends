@@ -7,20 +7,31 @@ use miette::IntoDiagnostic;
 use pixi_build_backend::{
     generated_recipe::{DefaultMetadataProvider, GenerateRecipe, GeneratedRecipe, PythonParams},
     intermediate_backend::IntermediateBackendInstantiator,
-    traits::ProjectModel,
 };
-use pixi_build_types::SourcePackageName;
 use rattler_build_jinja::Variable;
+use rattler_build_recipe::stage0::{ConditionalList, Item, Script, SerializableMatchSpec, Value};
 use rattler_build_types::NormalizedKey;
 use rattler_conda_types::{ChannelUrl, Platform};
-use recipe_stage0::recipe::Script;
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    path::Path,
-    sync::Arc,
-};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
+
+fn req(name: impl Into<String>) -> Item<SerializableMatchSpec> {
+    Item::Value(Value::new_concrete(name.into().parse().unwrap(), None))
+}
+
+fn script(content: String, env: indexmap::IndexMap<String, String>) -> Script {
+    Script {
+        content: Some(ConditionalList::new(vec![Item::Value(
+            Value::new_concrete(content, None),
+        )])),
+        env: env
+            .into_iter()
+            .map(|(k, v)| (k, Value::new_concrete(v, None)))
+            .collect(),
+        ..Default::default()
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct BazelGenerator {}
@@ -34,11 +45,14 @@ impl GenerateRecipe for BazelGenerator {
         model: &pixi_build_types::ProjectModel,
         config: &Self::Config,
         manifest_path: PathBuf,
-        host_platform: Platform,
+        _host_platform: Platform,
         _python_params: Option<PythonParams>,
         _variants: &HashSet<NormalizedKey>,
         _channels: Vec<ChannelUrl>,
         _cache_dir: Option<PathBuf>,
+        _workspace_scratch_directory: Option<PathBuf>,
+        _workspace_directory: Option<PathBuf>,
+        _checkout_root: Option<PathBuf>,
     ) -> miette::Result<GeneratedRecipe> {
         let manifest_root = if manifest_path.is_file() {
             manifest_path
@@ -59,15 +73,10 @@ impl GenerateRecipe for BazelGenerator {
                 .into_diagnostic()?;
 
         let requirements = &mut generated_recipe.recipe.requirements;
-        let model_dependencies = model.dependencies(Some(host_platform));
-
         // Add bazel as a build requirement unless the user already pulled it in.
         // `bazel` on conda-forge ships Bazelisk, which respects a checked-in
         // `.bazelversion`, so this works for projects pinning a specific Bazel.
-        let bazel = SourcePackageName::from("bazel");
-        if !model_dependencies.build.contains_key(&bazel) {
-            requirements.build.push("bazel".parse().into_diagnostic()?);
-        }
+        requirements.build.push(req("bazel"));
 
         let build_script = BuildScriptContext {
             source_dir: manifest_root.display().to_string(),
@@ -78,11 +87,7 @@ impl GenerateRecipe for BazelGenerator {
         }
         .render();
 
-        generated_recipe.recipe.build.script = Script {
-            content: build_script,
-            env: config.env.clone(),
-            ..Default::default()
-        };
+        generated_recipe.recipe.build.script = script(build_script, config.env.clone());
 
         Ok(generated_recipe)
     }
@@ -92,7 +97,7 @@ impl GenerateRecipe for BazelGenerator {
         config: &Self::Config,
         _workdir: impl AsRef<Path>,
         _editable: bool,
-    ) -> miette::Result<BTreeSet<String>> {
+    ) -> miette::Result<Vec<String>> {
         Ok([
             "BUILD",
             "BUILD.bazel",
@@ -124,7 +129,14 @@ impl GenerateRecipe for BazelGenerator {
 #[tokio::main]
 pub async fn main() {
     if let Err(err) = pixi_build_backend::cli::main(|log| {
-        IntermediateBackendInstantiator::<BazelGenerator>::new(log, Arc::default())
+        IntermediateBackendInstantiator::<BazelGenerator>::new(
+            pixi_build_backend::tools::BackendIdentifier::new(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ),
+            log,
+            Arc::default(),
+        )
     })
     .await
     {

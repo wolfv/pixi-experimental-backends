@@ -10,19 +10,30 @@ use pixi_build_backend::{
     Variable,
     generated_recipe::{GenerateRecipe, GeneratedRecipe, PythonParams},
     intermediate_backend::IntermediateBackendInstantiator,
-    traits::ProjectModel,
     variants::NormalizedKey,
 };
-use pixi_build_types::SourcePackageName;
+use rattler_build_recipe::stage0::{ConditionalList, Item, Script, SerializableMatchSpec, Value};
 use rattler_conda_types::{ChannelUrl, Platform};
-use recipe_stage0::recipe::Script;
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    path::Path,
-    sync::Arc,
-};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
+
+fn req(name: impl Into<String>) -> Item<SerializableMatchSpec> {
+    Item::Value(Value::new_concrete(name.into().parse().unwrap(), None))
+}
+
+fn script(content: String, env: indexmap::IndexMap<String, String>) -> Script {
+    Script {
+        content: Some(ConditionalList::new(vec![Item::Value(
+            Value::new_concrete(content, None),
+        )])),
+        env: env
+            .into_iter()
+            .map(|(k, v)| (k, Value::new_concrete(v, None)))
+            .collect(),
+        ..Default::default()
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct NodejsGenerator {}
@@ -36,11 +47,14 @@ impl GenerateRecipe for NodejsGenerator {
         model: &pixi_build_types::ProjectModel,
         config: &Self::Config,
         manifest_path: PathBuf,
-        host_platform: Platform,
+        _host_platform: Platform,
         _python_params: Option<PythonParams>,
         _variants: &HashSet<NormalizedKey>,
         _channels: Vec<ChannelUrl>,
         _cache_dir: Option<PathBuf>,
+        _workspace_scratch_directory: Option<PathBuf>,
+        _workspace_directory: Option<PathBuf>,
+        _checkout_root: Option<PathBuf>,
     ) -> miette::Result<GeneratedRecipe> {
         let manifest_root = if manifest_path.is_file() {
             manifest_path
@@ -61,25 +75,13 @@ impl GenerateRecipe for NodejsGenerator {
             GeneratedRecipe::from_model(model.clone(), &mut nodejs_metadata).into_diagnostic()?;
 
         let requirements = &mut generated_recipe.recipe.requirements;
-        let model_dependencies = model.dependencies(Some(host_platform));
-
         // Ensure nodejs is available during the build (needed to run node scripts
         // that create bin launchers and to detect package.json scripts).
-        let nodejs_pkg = SourcePackageName::from("nodejs");
-        if !model_dependencies.build.contains_key(&nodejs_pkg) {
-            requirements
-                .build
-                .push("nodejs".parse().into_diagnostic()?);
-        }
+        requirements.build.push(req("nodejs"));
 
         // Add the chosen package manager if it is not npm (npm ships with nodejs).
         if config.package_manager != "npm" {
-            let pkg_mgr = SourcePackageName::from(config.package_manager.as_str());
-            if !model_dependencies.build.contains_key(&pkg_mgr) {
-                requirements
-                    .build
-                    .push(config.package_manager.parse().into_diagnostic()?);
-            }
+            requirements.build.push(req(config.package_manager.clone()));
         }
 
         // Parse "source:dest" asset pairs.
@@ -107,11 +109,7 @@ impl GenerateRecipe for NodejsGenerator {
         }
         .render();
 
-        generated_recipe.recipe.build.script = Script {
-            content: build_script,
-            env: config.env.clone(),
-            ..Default::default()
-        };
+        generated_recipe.recipe.build.script = script(build_script, config.env.clone());
 
         generated_recipe
             .metadata_input_globs
@@ -125,7 +123,7 @@ impl GenerateRecipe for NodejsGenerator {
         config: &Self::Config,
         _workdir: impl AsRef<Path>,
         _editable: bool,
-    ) -> miette::Result<BTreeSet<String>> {
+    ) -> miette::Result<Vec<String>> {
         Ok([
             "package.json",
             "package-lock.json",
@@ -154,7 +152,14 @@ impl GenerateRecipe for NodejsGenerator {
 #[tokio::main]
 pub async fn main() {
     if let Err(err) = pixi_build_backend::cli::main(|log| {
-        IntermediateBackendInstantiator::<NodejsGenerator>::new(log, Arc::default())
+        IntermediateBackendInstantiator::<NodejsGenerator>::new(
+            pixi_build_backend::tools::BackendIdentifier::new(
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+            ),
+            log,
+            Arc::default(),
+        )
     })
     .await
     {
@@ -166,7 +171,7 @@ pub async fn main() {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use recipe_stage0::recipe::{Item, Value};
+    use rattler_build_recipe::stage0::{Item, Value};
 
     use super::*;
 
@@ -272,18 +277,13 @@ mod tests {
             .unwrap();
 
         // npm should NOT appear as a separate requirement (it ships with nodejs)
-        let has_npm = recipe
-            .recipe
-            .requirements
-            .build
-            .iter()
-            .any(|item| {
-                if let Item::Value(Value::Concrete(s)) = item {
-                    s.to_string() == "npm"
-                } else {
-                    false
-                }
-            });
+        let has_npm = recipe.recipe.requirements.build.iter().any(|item| {
+            if let Item::Value(Value::Concrete(s)) = item {
+                s.to_string() == "npm"
+            } else {
+                false
+            }
+        });
         assert!(!has_npm, "npm should not be added separately");
     }
 

@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use reqwest::Client;
 use serde_json::Value as Json;
 
@@ -90,7 +90,10 @@ pub async fn read_cuda_capabilities(client: &Client, repo: &str, rev: &str) -> R
     let mut caps = std::collections::BTreeSet::new();
     if let Some(kernels) = doc.get("kernel").and_then(toml::Value::as_table) {
         for kernel in kernels.values() {
-            if let Some(list) = kernel.get("cuda-capabilities").and_then(toml::Value::as_array) {
+            if let Some(list) = kernel
+                .get("cuda-capabilities")
+                .and_then(toml::Value::as_array)
+            {
                 for c in list {
                     if let Some(s) = c.as_str() {
                         caps.insert(s.to_string());

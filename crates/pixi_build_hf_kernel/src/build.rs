@@ -12,7 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use rattler_conda_types::compression_level::CompressionLevel;
 use rattler_conda_types::package::{IndexJson, PathType, PathsEntry, PathsJson};
 use rattler_conda_types::{NoArchType, PackageName, Platform, VersionWithSource};
@@ -66,7 +66,8 @@ pub async fn build_package(client: &reqwest::Client, req: &BuildRequest<'_>) -> 
         build_number: req.build_number,
         constrains: req.constrains.clone(),
         depends: req.depends.clone(),
-        experimental_extra_depends: Default::default(),
+        extra_depends: Default::default(),
+        flags: Default::default(),
         features: None,
         license: None,
         license_family: None,
@@ -77,6 +78,7 @@ pub async fn build_package(client: &reqwest::Client, req: &BuildRequest<'_>) -> 
         // CEP-17: relocate site-packages/ to the env python's site-packages.
         python_site_packages_path: Some("site-packages".to_string()),
         subdir: Some(req.subdir.to_string()),
+        repodata_revision: None,
         timestamp: None,
         track_features: vec![],
         version: VersionWithSource::from_str(req.version).into_diagnostic()?,
@@ -88,8 +90,8 @@ pub async fn build_package(client: &reqwest::Client, req: &BuildRequest<'_>) -> 
     for (_hub, rel) in &files {
         let abs = sp.join(rel);
         let size = fs::metadata(&abs).into_diagnostic()?.len();
-        let sha =
-            rattler_digest::compute_file_digest::<rattler_digest::Sha256>(&abs).into_diagnostic()?;
+        let sha = rattler_digest::compute_file_digest::<rattler_digest::Sha256>(&abs)
+            .into_diagnostic()?;
         entries.push(PathsEntry {
             relative_path: PathBuf::from(format!("site-packages/{rel}")),
             no_link: false,

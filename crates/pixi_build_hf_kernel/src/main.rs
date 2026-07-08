@@ -19,10 +19,10 @@ mod mapping;
 mod outputs;
 mod variant;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 
 use pixi_build_backend::protocol::{Protocol, ProtocolInstantiator};
 use rattler_conda_types::{
@@ -46,7 +46,7 @@ use pixi_build_types::{
     SourcePackageName, VariantValue,
 };
 
-use crate::mapping::{cuda_arch_floor, CondaRecord, MapOptions};
+use crate::mapping::{CondaRecord, MapOptions, cuda_arch_floor};
 use crate::outputs::build_all_records;
 
 use config::HfKernelConfig;
@@ -138,8 +138,10 @@ impl Protocol for HfKernelBackend {
 
         // conda_outputs is per host platform: keep only this subdir's variants.
         let host_str = host.to_string();
-        let records: Vec<CondaRecord> =
-            records.into_iter().filter(|r| r.subdir == host_str).collect();
+        let records: Vec<CondaRecord> = records
+            .into_iter()
+            .filter(|r| r.subdir == host_str)
+            .collect();
 
         let arch_floor = cuda_arch_floor(&caps);
         let mut outputs = Vec::with_capacity(records.len());
@@ -162,7 +164,8 @@ impl Protocol for HfKernelBackend {
 
         Ok(CondaOutputsResult {
             outputs,
-            input_globs: BTreeSet::new(),
+            input_globs: Vec::new(),
+            input_glob_sets: None,
         })
     }
 
@@ -209,7 +212,8 @@ impl Protocol for HfKernelBackend {
 
         Ok(CondaBuildV1Result {
             output_file,
-            input_globs: BTreeSet::new(),
+            input_globs: Vec::new(),
+            input_glob_sets: None,
             name,
             version: VersionWithSource::from_str(&version).into_diagnostic()?,
             build,
@@ -288,6 +292,7 @@ fn conda_output(
         subdir: host,
         license: None,
         license_family: None,
+        flags: Vec::new(),
         noarch: NoArchType::default(),
         purls: None,
         python_site_packages_path: None,
@@ -298,7 +303,10 @@ fn conda_output(
                 "hf_kernel_variant".to_string(),
                 VariantValue::String(r.variant.clone()),
             ),
-            ("hf_kernel_sha".to_string(), VariantValue::String(sha.to_string())),
+            (
+                "hf_kernel_sha".to_string(),
+                VariantValue::String(sha.to_string()),
+            ),
         ]),
     };
 
@@ -310,9 +318,11 @@ fn conda_output(
             depends,
             constraints,
         },
+        extra_dependencies: BTreeMap::new(),
         ignore_run_exports: CondaOutputIgnoreRunExports::default(),
         run_exports: CondaOutputRunExports::default(),
         input_globs: None,
+        input_glob_sets: None,
     })
 }
 
@@ -321,7 +331,7 @@ fn named_package(spec: &str) -> Result<NamedSpec<PackageSpec>> {
     let (name, nameless) = split_matchspec(spec)?;
     Ok(NamedSpec {
         name,
-        spec: PackageSpec::Binary(to_binary(nameless)),
+        spec: PackageSpec::Binary(Box::new(to_binary(nameless))),
     })
 }
 
@@ -337,13 +347,11 @@ fn named_constraint(spec: &str) -> Result<NamedSpec<ConstraintSpec>> {
 /// Split `name >=1.0` into (source name, nameless spec) via a strict parse.
 fn split_matchspec(spec: &str) -> Result<(SourcePackageName, NamelessMatchSpec)> {
     let ms = MatchSpec::from_str(spec, ParseStrictness::Lenient).into_diagnostic()?;
-    let (Some(name_matcher), nameless) = ms.into_nameless() else {
-        return Err(miette!("matchspec {spec:?} has no package name"));
-    };
+    let (name_matcher, nameless) = ms.into_nameless();
     let name = name_matcher
         .as_exact()
         .ok_or_else(|| miette!("matchspec {spec:?} needs an exact name"))?;
-    Ok((name.as_source().to_owned(), nameless))
+    Ok((SourcePackageName::from(name.to_owned()), nameless))
 }
 
 /// Mirror of pixi-build-backend's private `convert_nameless_matchspec`.
@@ -359,6 +367,9 @@ fn to_binary(spec: NamelessMatchSpec) -> BinaryPackageSpec {
         sha256: spec.sha256,
         url: spec.url,
         license: spec.license,
+        condition: None,
+        extras: None,
+        flags: None,
     }
 }
 
@@ -419,18 +430,27 @@ mod tests {
         let sha = hub::resolve_sha(&client, repo, "main").await.unwrap();
         assert_eq!(sha.len(), 40, "expected a 40-char commit sha, got {sha:?}");
         let variants = hub::list_variants(&client, repo, &sha).await.unwrap();
-        assert!(variants.len() > 10, "expected many variants, got {}", variants.len());
+        assert!(
+            variants.len() > 10,
+            "expected many variants, got {}",
+            variants.len()
+        );
 
         let opts = MapOptions {
             package_name: "activation".into(),
             version: "0.0.1".into(),
             build_number: 0,
-            cuda_capabilities: hub::read_cuda_capabilities(&client, repo, &sha).await.unwrap(),
+            cuda_capabilities: hub::read_cuda_capabilities(&client, repo, &sha)
+                .await
+                .unwrap(),
             require_cxx11: true,
         };
         let (records, _skipped) = build_all_records(&variants, &opts);
         let linux64 = records.iter().filter(|r| r.subdir == "linux-64").count();
-        eprintln!("{repo}@{sha}: {} records, {linux64} for linux-64", records.len());
+        eprintln!(
+            "{repo}@{sha}: {} records, {linux64} for linux-64",
+            records.len()
+        );
         assert!(linux64 > 0, "expected some linux-64 records");
     }
 
@@ -439,7 +459,9 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn live_build_produces_valid_conda() {
-        use pixi_build_types::procedures::conda_build_v1::{CondaBuildV1Output, CondaBuildV1Params};
+        use pixi_build_types::procedures::conda_build_v1::{
+            CondaBuildV1Output, CondaBuildV1Params,
+        };
 
         let client = reqwest::Client::new();
         let repo = "kernels-community/activation";
@@ -462,8 +484,14 @@ mod tests {
             build: Some("torch_test".to_string()),
             subdir: Platform::Linux64,
             variant: BTreeMap::from([
-                ("hf_kernel_variant".to_string(), VariantValue::String(variant.clone())),
-                ("hf_kernel_sha".to_string(), VariantValue::String(sha.clone())),
+                (
+                    "hf_kernel_variant".to_string(),
+                    VariantValue::String(variant.clone()),
+                ),
+                (
+                    "hf_kernel_sha".to_string(),
+                    VariantValue::String(sha.clone()),
+                ),
             ]),
         };
         let params = CondaBuildV1Params {
@@ -479,24 +507,41 @@ mod tests {
             editable: None,
         };
 
-        let cfg = HfKernelConfig { repo: repo.into(), ..Default::default() };
+        let cfg = HfKernelConfig {
+            repo: repo.into(),
+            ..Default::default()
+        };
         let backend = HfKernelBackend {
             config: cfg,
-            project_model: serde_json::from_value(serde_json::json!({"name":"activation"})).unwrap(),
+            project_model: serde_json::from_value(serde_json::json!({"name":"activation"}))
+                .unwrap(),
             client: client.clone(),
         };
 
         let res = backend.conda_build_v1(params).await.unwrap();
 
         assert!(res.output_file.exists(), "no .conda written");
-        assert_eq!(res.output_file, out_dir.join("activation-0.0.1-torch_test.conda"));
+        assert_eq!(
+            res.output_file,
+            out_dir.join("activation-0.0.1-torch_test.conda")
+        );
         let bytes = std::fs::read(&res.output_file).unwrap();
         assert!(bytes.starts_with(b"PK"), ".conda is not a zip");
         let hay = String::from_utf8_lossy(&bytes);
         assert!(hay.contains("metadata.json"), "missing outer metadata.json");
-        assert!(hay.contains("info-activation-0.0.1-torch_test.tar.zst"), "missing info archive");
-        assert!(hay.contains("pkg-activation-0.0.1-torch_test.tar.zst"), "missing pkg archive");
-        eprintln!("wrote {} ({} bytes)", res.output_file.display(), bytes.len());
+        assert!(
+            hay.contains("info-activation-0.0.1-torch_test.tar.zst"),
+            "missing info archive"
+        );
+        assert!(
+            hay.contains("pkg-activation-0.0.1-torch_test.tar.zst"),
+            "missing pkg archive"
+        );
+        eprintln!(
+            "wrote {} ({} bytes)",
+            res.output_file.display(),
+            bytes.len()
+        );
     }
 
     #[tokio::test]
@@ -504,7 +549,11 @@ mod tests {
         let res = backend().conda_outputs(params()).await.unwrap();
 
         // cxx98 and the aarch64 variant are filtered out for linux-64.
-        let builds: BTreeSet<_> = res.outputs.iter().map(|o| o.metadata.build.clone()).collect();
+        let builds: BTreeSet<_> = res
+            .outputs
+            .iter()
+            .map(|o| o.metadata.build.clone())
+            .collect();
         assert_eq!(
             builds,
             BTreeSet::from([
@@ -522,12 +571,21 @@ mod tests {
         assert_eq!(o.metadata.name.as_normalized(), "flash-attn");
 
         // Run dependency: pytorch pinned to the variant's torch minor.
-        let dep_names: BTreeSet<_> = o.run_dependencies.depends.iter().map(|d| d.name.clone()).collect();
+        let dep_names: BTreeSet<_> = o
+            .run_dependencies
+            .depends
+            .iter()
+            .map(|d| d.name.clone())
+            .collect();
         assert!(dep_names.contains("pytorch"));
 
         // The solver-selection constraints: __cuda floor, cuda-version, __cuda_arch floor.
-        let con_names: BTreeSet<_> =
-            o.run_dependencies.constraints.iter().map(|c| c.name.clone()).collect();
+        let con_names: BTreeSet<_> = o
+            .run_dependencies
+            .constraints
+            .iter()
+            .map(|c| c.name.clone())
+            .collect();
         assert!(con_names.contains("__cuda"), "constraints: {con_names:?}");
         assert!(con_names.contains("cuda-version"));
         assert!(con_names.contains("__cuda_arch"));
