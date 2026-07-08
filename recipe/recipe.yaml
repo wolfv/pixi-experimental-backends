@@ -31,6 +31,9 @@ outputs:
         - ${{ compiler("c") }}
         - ${{ compiler("rust") }}
         - ${{ stdlib("c") }}
+        # aws-lc-sys' cc-rs build trips over sccache/cl.exe on Windows.
+        - cmake
+        - ninja
         - cargo-bundle-licenses
         - cargo-auditable
       host:
@@ -42,6 +45,7 @@ outputs:
     build:
       script:
         env:
+          AWS_LC_SYS_CMAKE_BUILDER: "1"
           CARGO_PROFILE_RELEASE_STRIP: symbols
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
         content:
