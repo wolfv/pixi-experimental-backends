@@ -2,6 +2,7 @@
 # pixi-build-hf-kernel backend.
 #
 #   pixi install        # solver picks the variant matching pytorch + __cuda(_arch)
+#   pixi run start      # print kernel metadata and run a tiny attention smoke test
 #   cat pixi.lock       # the chosen variant is pinned here
 #
 # The backend lists `build/` on the Hub, resolves `rev` to a commit sha, and
@@ -37,3 +38,7 @@ require-cxx11 = true
 [dependencies]
 flash-attn = { path = "." }
 pytorch = ">=2.6"
+python = ">=3.10"
+
+[tasks]
+start = "python start.py"
