@@ -12,7 +12,9 @@ use pixi_build_backend::{
     generated_recipe::{GenerateRecipe, GeneratedRecipe, PythonParams},
     intermediate_backend::IntermediateBackendInstantiator,
 };
-use rattler_build_recipe::stage0::{ConditionalList, Item, Script, SerializableMatchSpec, Value};
+use rattler_build_recipe::stage0::{
+    BuildPlan, ConditionalList, Item, Script, SerializableMatchSpec, Value,
+};
 use rattler_conda_types::{ChannelUrl, Platform};
 use std::collections::HashSet;
 use std::{
@@ -117,7 +119,8 @@ impl GenerateRecipe for GoGenerator {
         }
         .render();
 
-        generated_recipe.recipe.build.script = script(build_script, config.env.clone());
+        generated_recipe.recipe.build.plan =
+            BuildPlan::Script(Box::new(script(build_script, config.env.clone())));
 
         generated_recipe
             .metadata_input_globs
@@ -176,7 +179,6 @@ pub async fn main() {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use rattler_build_recipe::stage0::{Item, Value};
 
     use super::*;
 
@@ -217,6 +219,9 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .expect("Failed to generate recipe");
@@ -225,9 +230,10 @@ mod tests {
         let compiler_templates: Vec<String> = build_reqs
             .iter()
             .filter_map(|item| match item {
-                Item::Value(Value::Template(s)) if s.contains("compiler") => Some(s.clone()),
+                Item::Value(value) => value.as_template().map(|t| t.source().to_string()),
                 _ => None,
             })
+            .filter(|s| s.contains("compiler"))
             .collect();
 
         assert_eq!(compiler_templates.len(), 1);
@@ -270,6 +276,9 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .expect("Failed to generate recipe");
@@ -278,9 +287,10 @@ mod tests {
         let compiler_templates: Vec<String> = build_reqs
             .iter()
             .filter_map(|item| match item {
-                Item::Value(Value::Template(s)) if s.contains("compiler") => Some(s.clone()),
+                Item::Value(value) => value.as_template().map(|t| t.source().to_string()),
                 _ => None,
             })
+            .filter(|s| s.contains("compiler"))
             .collect();
 
         assert!(compiler_templates.contains(&"${{ compiler('go-cgo') }}".to_string()));
@@ -321,6 +331,9 @@ mod tests {
                 None,
                 &HashSet::new(),
                 vec![],
+                None,
+                None,
+                None,
                 None,
             )
             .await
@@ -374,13 +387,58 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .expect("Failed to generate recipe");
 
-        insta::assert_yaml_snapshot!(generated_recipe.recipe.build.script, {
+        insta::assert_yaml_snapshot!(generated_recipe.recipe.build.plan.script().unwrap(), {
             ".content" => "[ ... script ... ]",
         });
+    }
+
+    #[tokio::test]
+    async fn test_api_v7_pins_and_run_exports() {
+        let model = project_fixture!({
+            "name": "foobar",
+            "version": "1.0.0",
+            "targets": {
+                "defaultTarget": {
+                    "hostDependencies": {"libfoo": {"binary": {"version": "*"}}},
+                    "runDependencies": {"libfoo": {"pinCompatible": {"exact": true}}},
+                    "runExports": {
+                        "weak": {"foobar": {"pinSubpackage": {"exact": true}}}
+                    }
+                }
+            }
+        });
+        let generated = GoGenerator::default()
+            .generate_recipe(
+                &model,
+                &GoBackendConfig::default(),
+                PathBuf::from("."),
+                Platform::Linux64,
+                None,
+                &HashSet::new(),
+                vec![],
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            serde_json::to_value(&generated.recipe.requirements.run).unwrap(),
+            serde_json::json!([r#"${{ pin_compatible("libfoo", exact=True) }}"#])
+        );
+        assert_eq!(
+            serde_json::to_value(&generated.recipe.requirements.run_exports.weak).unwrap(),
+            serde_json::json!([r#"${{ pin_subpackage("foobar", exact=True) }}"#])
+        );
     }
 
     #[test]
@@ -395,10 +453,10 @@ mod tests {
             .extract_input_globs_from_build(&config, PathBuf::new(), false)
             .unwrap();
 
-        assert!(result.contains("**/*.go"));
-        assert!(result.contains("go.mod"));
-        assert!(result.contains("go.sum"));
-        assert!(result.contains("custom/*.txt"));
+        assert!(result.contains(&"**/*.go".to_string()));
+        assert!(result.contains(&"go.mod".to_string()));
+        assert!(result.contains(&"go.sum".to_string()));
+        assert!(result.contains(&"custom/*.txt".to_string()));
     }
 
     #[tokio::test]
@@ -428,6 +486,9 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .expect("Failed to generate recipe");
@@ -436,7 +497,11 @@ mod tests {
             generated_recipe.recipe.package.name.to_string(),
             "my-go-tool"
         );
-        assert!(generated_recipe.metadata_input_globs.contains("go.mod"));
+        assert!(
+            generated_recipe
+                .metadata_input_globs
+                .contains(&"go.mod".to_string())
+        );
     }
 
     #[tokio::test]
@@ -463,6 +528,9 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .expect("Failed to generate recipe");
@@ -471,9 +539,10 @@ mod tests {
         let compiler_templates: Vec<String> = build_reqs
             .iter()
             .filter_map(|item| match item {
-                Item::Value(Value::Template(s)) if s.contains("compiler") => Some(s.clone()),
+                Item::Value(value) => value.as_template().map(|t| t.source().to_string()),
                 _ => None,
             })
+            .filter(|s| s.contains("compiler"))
             .collect();
 
         assert_eq!(compiler_templates.len(), 3);

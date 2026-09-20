@@ -161,7 +161,9 @@ impl Protocol for HfKernelBackend {
                 &name,
                 &version,
                 host,
-                metadata_arch_floor.as_deref().or(fallback_arch_floor.as_deref()),
+                metadata_arch_floor
+                    .as_deref()
+                    .or(fallback_arch_floor.as_deref()),
                 &resolved_rev,
             )?);
         }
@@ -260,7 +262,11 @@ fn host_python_site_packages_path(params: &CondaBuildV1Params) -> Result<String>
         .find(|p| p.repodata_record.package_record.name.as_normalized() == "python")
         .ok_or_else(|| miette!("host prefix is missing python"))?;
 
-    if let Some(path) = &python.repodata_record.package_record.python_site_packages_path {
+    if let Some(path) = &python
+        .repodata_record
+        .package_record
+        .python_site_packages_path
+    {
         return Ok(path.clone());
     }
 
@@ -335,6 +341,7 @@ fn conda_output(
         license: None,
         license_family: None,
         flags: Vec::new(),
+        track_features: Vec::new(),
         noarch: NoArchType::default(),
         purls: None,
         python_site_packages_path: None,
@@ -385,7 +392,7 @@ fn named_constraint(spec: &str) -> Result<NamedSpec<ConstraintSpec>> {
     let (name, nameless) = split_matchspec(spec)?;
     Ok(NamedSpec {
         name,
-        spec: ConstraintSpec::Binary(to_binary(nameless)),
+        spec: ConstraintSpec::Binary(Box::new(to_binary(nameless))),
     })
 }
 

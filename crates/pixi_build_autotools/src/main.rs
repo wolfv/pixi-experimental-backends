@@ -9,7 +9,9 @@ use pixi_build_backend::{
     intermediate_backend::IntermediateBackendInstantiator,
 };
 use rattler_build_jinja::Variable;
-use rattler_build_recipe::stage0::{ConditionalList, Item, Script, SerializableMatchSpec, Value};
+use rattler_build_recipe::stage0::{
+    BuildPlan, ConditionalList, Item, Script, SerializableMatchSpec, Value,
+};
 use rattler_build_types::NormalizedKey;
 use rattler_conda_types::{ChannelUrl, Platform};
 use std::collections::HashSet;
@@ -123,7 +125,8 @@ impl GenerateRecipe for AutotoolsGenerator {
         }
         .render();
 
-        generated_recipe.recipe.build.script = script(build_script, config.env.clone());
+        generated_recipe.recipe.build.plan =
+            BuildPlan::Script(Box::new(script(build_script, config.env.clone())));
 
         Ok(generated_recipe)
     }
