@@ -13,7 +13,7 @@ systems that aren't covered by the in-tree backends yet.
 | `pixi-build-nodejs` | Node.js apps via npm / yarn / pnpm / bun |
 | `pixi-build-bazel` | Projects built with [Bazel](https://bazel.build/) |
 
-All backends speak the pixi build API (`pixi-build-api-version >=4,<5`) and
+All backends speak the pixi build API (`pixi-build-api-version >=7,<8`) and
 are distributed as conda packages on the
 [`pixi-experimental-backends`](https://prefix.dev/channels/pixi-experimental-backends)
 channel on prefix.dev.

@@ -12,7 +12,9 @@ use pixi_build_backend::{
     intermediate_backend::IntermediateBackendInstantiator,
     variants::NormalizedKey,
 };
-use rattler_build_recipe::stage0::{ConditionalList, Item, Script, SerializableMatchSpec, Value};
+use rattler_build_recipe::stage0::{
+    BuildPlan, ConditionalList, Item, Script, SerializableMatchSpec, Value,
+};
 use rattler_conda_types::{ChannelUrl, Platform};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -109,7 +111,8 @@ impl GenerateRecipe for NodejsGenerator {
         }
         .render();
 
-        generated_recipe.recipe.build.script = script(build_script, config.env.clone());
+        generated_recipe.recipe.build.plan =
+            BuildPlan::Script(Box::new(script(build_script, config.env.clone())));
 
         generated_recipe
             .metadata_input_globs
@@ -171,7 +174,6 @@ pub async fn main() {
 #[cfg(test)]
 mod tests {
     use indexmap::IndexMap;
-    use rattler_build_recipe::stage0::{Item, Value};
 
     use super::*;
 
@@ -201,6 +203,9 @@ mod tests {
                 None,
                 &HashSet::new(),
                 vec![],
+                None,
+                None,
+                None,
                 None,
             )
             .await
@@ -241,6 +246,9 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .unwrap();
@@ -272,14 +280,17 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .unwrap();
 
         // npm should NOT appear as a separate requirement (it ships with nodejs)
         let has_npm = recipe.recipe.requirements.build.iter().any(|item| {
-            if let Item::Value(Value::Concrete(s)) = item {
-                s.to_string() == "npm"
+            if let Item::Value(value) = item {
+                value.as_concrete().is_some_and(|s| s.to_string() == "npm")
             } else {
                 false
             }
@@ -310,11 +321,14 @@ mod tests {
                 &HashSet::new(),
                 vec![],
                 None,
+                None,
+                None,
+                None,
             )
             .await
             .unwrap();
 
-        insta::assert_yaml_snapshot!(recipe.recipe.build.script, {
+        insta::assert_yaml_snapshot!(recipe.recipe.build.plan.script().unwrap(), {
             ".content" => "[ ... script ... ]",
         });
     }
@@ -326,10 +340,10 @@ mod tests {
             .extract_input_globs_from_build(&config, PathBuf::new(), false)
             .unwrap();
 
-        assert!(globs.contains("package.json"));
-        assert!(globs.contains("package-lock.json"));
-        assert!(globs.contains("yarn.lock"));
-        assert!(globs.contains("pnpm-lock.yaml"));
+        assert!(globs.contains(&"package.json".to_string()));
+        assert!(globs.contains(&"package-lock.json".to_string()));
+        assert!(globs.contains(&"yarn.lock".to_string()));
+        assert!(globs.contains(&"pnpm-lock.yaml".to_string()));
     }
 
     #[test]
@@ -342,7 +356,7 @@ mod tests {
             .extract_input_globs_from_build(&config, PathBuf::new(), false)
             .unwrap();
 
-        assert!(globs.contains("config/**/*.json"));
+        assert!(globs.contains(&"config/**/*.json".to_string()));
     }
 
     #[tokio::test]
@@ -369,6 +383,9 @@ mod tests {
                 None,
                 &HashSet::new(),
                 vec![],
+                None,
+                None,
+                None,
                 None,
             )
             .await

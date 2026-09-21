@@ -1,8 +1,7 @@
 ---
 source: crates/pixi_build_nodejs/src/main.rs
-expression: recipe.recipe.build.script
+expression: recipe.recipe.build.plan.script().unwrap()
 ---
-content: "[ ... script ... ]"
 env:
   NODE_ENV: production
-secrets: []
+content: "[ ... script ... ]"
