@@ -4306,7 +4306,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pixi_build_autotools"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
@@ -4364,7 +4364,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_bazel"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
@@ -4382,7 +4382,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_go"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
@@ -4403,7 +4403,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_gradle"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
@@ -4441,7 +4441,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_make"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
@@ -4459,7 +4459,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_meson"
-version = "0.1.15"
+version = "0.1.16"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
@@ -4477,7 +4477,7 @@ dependencies = [
 
 [[package]]
 name = "pixi_build_nodejs"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "async-trait",
  "indexmap 2.14.2",
